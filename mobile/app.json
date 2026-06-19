@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "Ariel Finance",
+    "slug": "ariel-finance",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "ariel-finance",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ariel.finance"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0f172a"
+      },
+      "package": "com.ariel.finance"
+    },
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ]
+  }
+}
