@@ -1,3 +1,18 @@
+"""
+Endpoints de Presupuestos.
+===========================
+
+Los presupuestos permiten al usuario definir límites de gasto
+por categoría y período (semanal, mensual, anual).
+
+El frontend usa estos presupuestos para:
+  - Mostrar barras de progreso (gastado vs. presupuestado)
+  - Enviar notificaciones cuando se acerca al límite
+
+NOTA: El cálculo de "cuánto se ha gastado" se hace en el frontend
+calculando la suma de transacciones de esa categoría en el período.
+"""
+
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -18,6 +33,9 @@ async def list_budgets(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    Devuelve todos los presupuestos del usuario autenticado.
+    """
     result = await db.execute(select(Budget).where(Budget.user_id == current_user.id))
     return result.scalars().all()
 
@@ -28,6 +46,16 @@ async def create_budget(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    Crea un nuevo presupuesto para una categoría.
+
+    Ejemplo:
+      { "category_id": "uuid", "amount": 500.00, "period": "monthly",
+        "start_date": "2026-06-01" }
+
+    Esto significa: "No quiero gastar más de $500 en esta categoría
+    durante junio 2026".
+    """
     budget = Budget(user_id=current_user.id, **payload.model_dump())
     db.add(budget)
     await db.flush()
@@ -40,10 +68,16 @@ async def delete_budget(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    Elimina un presupuesto.
+    """
     result = await db.execute(
         select(Budget).where(Budget.id == budget_id, Budget.user_id == current_user.id)
     )
     budget = result.scalar_one_or_none()
     if not budget:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Budget not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Presupuesto no encontrado",
+        )
     await db.delete(budget)

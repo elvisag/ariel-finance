@@ -1,3 +1,15 @@
+"""
+Endpoints de Cuentas.
+======================
+
+CRUD básico de cuentas bancarias/efectivo del usuario.
+
+Consideraciones de seguridad:
+  - Cada endpoint verifica que la cuenta pertenezca al usuario autenticado
+  - Un usuario NO puede ver/modificar cuentas de otros usuarios
+  - Esto se logra filtrando siempre por current_user.id
+"""
+
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -18,7 +30,14 @@ async def list_accounts(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(Account).where(Account.user_id == current_user.id))
+    """
+    Devuelve todas las cuentas del usuario autenticado.
+
+    Filtra por user_id para que cada usuario vea solo sus cuentas.
+    """
+    result = await db.execute(
+        select(Account).where(Account.user_id == current_user.id)
+    )
     return result.scalars().all()
 
 
@@ -28,6 +47,14 @@ async def create_account(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    Crea una nueva cuenta para el usuario autenticado.
+
+    Ejemplo de body:
+      { "name": "Mi billetera", "type": "cash", "currency": "ARS", "balance": 1500.00 }
+
+    El user_id se asigna automáticamente del token JWT.
+    """
     account = Account(user_id=current_user.id, **payload.model_dump())
     db.add(account)
     await db.flush()
@@ -40,10 +67,24 @@ async def get_account(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    Devuelve una cuenta específica por su ID.
+
+    Solo accesible si la cuenta pertenece al usuario autenticado.
+
+    Posibles errores:
+      404 Not Found → la cuenta no existe o no pertenece al usuario
+    """
     result = await db.execute(
-        select(Account).where(Account.id == account_id, Account.user_id == current_user.id)
+        select(Account).where(
+            Account.id == account_id,
+            Account.user_id == current_user.id,  # ← Filtro de seguridad
+        )
     )
     account = result.scalar_one_or_none()
     if not account:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Cuenta no encontrada",
+        )
     return account

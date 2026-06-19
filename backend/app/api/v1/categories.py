@@ -1,3 +1,16 @@
+"""
+Endpoints de Categorías.
+=========================
+
+Las categorías clasifican las transacciones (Comida, Transporte, etc.).
+
+Tipos de categorías:
+  - Categorías globales (user_id = NULL): vienen por defecto en el sistema
+  - Categorías del usuario (user_id = usuario): las crea cada usuario
+
+El endpoint GET /categories/ devuelve AMBAS (globales + propias).
+"""
+
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -18,9 +31,22 @@ async def list_categories(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    Devuelve las categorías disponibles para el usuario.
+
+    Incluye:
+      - Categorías globales (user_id IS NULL)
+      - Categorías personalizadas del usuario
+
+    Esto permite tener una base de categorías comunes que
+    todos los usuarios pueden usar, más las que cada uno crea.
+    """
     result = await db.execute(
         select(Category).where(
-            or_(Category.user_id == current_user.id, Category.user_id.is_(None))
+            or_(
+                Category.user_id == current_user.id,
+                Category.user_id.is_(None),  # Categorías globales
+            )
         )
     )
     return result.scalars().all()
@@ -32,6 +58,12 @@ async def create_category(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    Crea una categoría personalizada para el usuario.
+
+    Ejemplo:
+      { "name": "Supermercado", "icon": "cart", "color": "#10b981", "type": "expense" }
+    """
     category = Category(user_id=current_user.id, **payload.model_dump())
     db.add(category)
     await db.flush()
@@ -44,10 +76,19 @@ async def delete_category(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    Elimina una categoría personalizada.
+
+    NOTA: Solo se pueden eliminar categorías propias (no las globales).
+    Las transacciones que usaban esta categoría quedan con category_id = NULL.
+    """
     result = await db.execute(
         select(Category).where(Category.id == category_id, Category.user_id == current_user.id)
     )
     category = result.scalar_one_or_none()
     if not category:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Categoría no encontrada",
+        )
     await db.delete(category)

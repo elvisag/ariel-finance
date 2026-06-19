@@ -1,3 +1,22 @@
+"""
+Endpoints de Transacciones.
+============================
+
+Maneja el registro, consulta y eliminación de movimientos.
+
+Lógica de negocio importante:
+  - CREAR transacción tipo "expense" → resta del balance de la cuenta
+  - CREAR transacción tipo "income" → suma al balance de la cuenta
+  - ELIMINAR transacción → revierte el efecto en el balance
+
+Filtros disponibles en GET /transactions/:
+  - account_id: ver solo movimientos de una cuenta específica
+  - start_date/end_date: filtrar por rango de fechas
+  - type: filtrar por tipo (income/expense)
+
+Seguridad: Siempre se verifica que la cuenta pertenezca al usuario.
+"""
+
 import uuid
 from datetime import date
 
@@ -24,8 +43,25 @@ async def list_transactions(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    Lista las transacciones del usuario, con filtros opcionales.
+
+    La query une Transaction con Account para filtrar solo
+    las cuentas del usuario autenticado.
+
+    Filtros (todos opcionales):
+      - account_id: UUID de la cuenta
+      - start_date: YYYY-MM-DD (transacciones desde esta fecha)
+      - end_date: YYYY-MM-DD (transacciones hasta esta fecha)
+      - type: "income", "expense" o "transfer"
+
+    Los resultados se ordenan por fecha descendente (más recientes primero).
+    """
+    # Construimos la query base haciendo JOIN con Account
+    # para asegurarnos que solo vemos transacciones de cuentas propias
     query = select(Transaction).join(Account).where(Account.user_id == current_user.id)
 
+    # Aplicamos filtros dinámicamente (solo si están presentes)
     if account_id:
         query = query.where(Transaction.account_id == account_id)
     if start_date:
@@ -46,20 +82,41 @@ async def create_transaction(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    Crea una nueva transacción y actualiza el balance de la cuenta.
+
+    Pasos:
+      1. Verificar que la cuenta pertenece al usuario
+      2. Crear la transacción
+      3. Actualizar el balance:
+           expense → balance -= amount
+           income  → balance += amount
+
+    Ejemplo body (gasto):
+      { "account_id": "uuid", "amount": 50.00, "type": "expense",
+        "description": "Cena", "transaction_date": "2026-06-19" }
+    """
+    # ── Verificar que la cuenta es del usuario ────────────────
     acct_result = await db.execute(
         select(Account).where(Account.id == payload.account_id, Account.user_id == current_user.id)
     )
     account = acct_result.scalar_one_or_none()
     if not account:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Cuenta no encontrada",
+        )
 
+    # ── Crear transacción ─────────────────────────────────────
     transaction = Transaction(**payload.model_dump())
     db.add(transaction)
 
+    # ── Actualizar balance de la cuenta ───────────────────────
     if payload.type == "expense":
         account.balance -= payload.amount
     elif payload.type == "income":
         account.balance += payload.amount
+    # type == "transfer": no afecta el balance global, se maneja aparte
 
     await db.flush()
     return transaction
@@ -71,6 +128,19 @@ async def delete_transaction(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    Elimina una transacción y REVIERTE su efecto en el balance.
+
+    Si la transacción era un gasto (expense):
+      → devolvemos el dinero al balance (balance += amount)
+
+    Si la transacción era un ingreso (income):
+      → quitamos el dinero del balance (balance -= amount)
+
+    Esto mantiene la consistencia: eliminar una transacción
+    es como si nunca hubiera ocurrido.
+    """
+    # Buscar la transacción asegurándonos que pertenece al usuario
     query = (
         select(Transaction)
         .join(Account)
@@ -79,12 +149,16 @@ async def delete_transaction(
     result = await db.execute(query)
     transaction = result.scalar_one_or_none()
     if not transaction:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Transacción no encontrada",
+        )
 
+    # Revertir el efecto en el balance
     account = transaction.account
     if transaction.type == "expense":
-        account.balance += transaction.amount
+        account.balance += transaction.amount  # Devolver el dinero
     elif transaction.type == "income":
-        account.balance -= transaction.amount
+        account.balance -= transaction.amount  # Quitar el dinero
 
     await db.delete(transaction)
