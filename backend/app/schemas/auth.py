@@ -31,6 +31,11 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class GoogleAuthRequest(BaseModel):
+    """Schema para autenticación con Google (recibe el ID token de Google)."""
+    id_token: str
+
+
 class TokenResponse(BaseModel):
     """
     Schema para la respuesta exitosa de autenticación.

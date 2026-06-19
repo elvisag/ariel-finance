@@ -102,6 +102,10 @@ export const authApi = {
 
   /** Obtener perfil del usuario autenticado */
   me: () => api.get<User>("/users/me"),
+
+  /** Autenticación con Google (recibe el id_token de Google) */
+  googleAuth: (idToken: string) =>
+    api.post<TokenResponse>("/auth/google", { id_token: idToken }),
 };
 
 export const accountsApi = {

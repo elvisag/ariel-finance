@@ -2,24 +2,14 @@
  * Pantalla de inicio de sesión.
  * =============================
  *
- * Es la primera pantalla que ve el usuario si no está autenticado.
+ * Dos formas de entrar:
+ *   1. Email + contraseña (registro tradicional)
+ *   2. Google OAuth (con expo-auth-session)
  *
  * Flujo:
- *   1. Usuario ingresa email + contraseña
- *   2. Toca "Entrar"
- *   3. Se llama a useAuthStore.login()
- *   4. Si OK → redirige a (tabs)
- *   5. Si error → muestra mensaje en rojo
- *
- * Diseño:
- *   - Fondo oscuro (slate-950) → típico de apps financieras
- *   - Inputs con estilo consistente (bg-slate-800, rounded-xl)
- *   - Botón principal indigo-500
- *   - Enlace a registro
- *
- * Teclado:
- *   - KeyboardAvoidingView asegura que los inputs no queden
- *     tapados por el teclado en iOS
+ *   1. Usuario elige cómo autenticarse
+ *   2. Si OK → redirige a (tabs)
+ *   3. Si error → muestra mensaje en rojo
  */
 
 import { useState } from "react";
@@ -30,52 +20,80 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuthStore } from "../../store/auth";
+import { useGoogleAuth } from "../../hooks/useGoogleAuth";
 
 export default function LoginScreen() {
-  // ── Estado local del formulario ─────────────────────────────
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-
   const router = useRouter();
   const login = useAuthStore((s) => s.login);
 
-  /**
-   * Maneja el envío del formulario de login.
-   *
-   * Si el login es exitoso, el store de auth actualiza
-   * isAuthenticated = true y el layout redirige automáticamente.
-   */
+  const {
+    signInWithGoogle,
+    isLoading: googleLoading,
+    error: googleError,
+    isReady: googleReady,
+  } = useGoogleAuth();
+
   const handleLogin = async () => {
     try {
       setError("");
       await login(email, password);
-      router.replace("/(tabs)");  // replace evita volver atrás con el botón
+      router.replace("/(tabs)");
     } catch (err: any) {
-      // El backend devuelve error en err.response.data.detail
       setError(err.response?.data?.detail || "Error al iniciar sesión");
     }
   };
+
+  const displayError = error || googleError;
 
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       className="flex-1 bg-slate-950 justify-center px-6"
     >
-      {/* ── Logo / Título ─────────────────────────────────── */}
-      <View className="mb-12">
+      {/* ── Logo ────────────────────────────────────────────── */}
+      <View className="mb-10">
         <Text className="text-4xl font-bold text-white">Ariel</Text>
         <Text className="text-4xl font-bold text-indigo-400">Finance</Text>
         <Text className="text-slate-400 mt-2 text-lg">Controla tus finanzas</Text>
       </View>
 
-      {/* ── Mensaje de error ──────────────────────────────── */}
-      {error ? (
-        <Text className="text-red-400 mb-4 text-center">{error}</Text>
+      {/* ── Error ───────────────────────────────────────────── */}
+      {displayError ? (
+        <Text className="text-red-400 mb-4 text-center">{displayError}</Text>
       ) : null}
+
+      {/* ── Botón Google ────────────────────────────────────── */}
+      <TouchableOpacity
+        className="bg-white p-4 rounded-xl items-center flex-row justify-center mb-6"
+        onPress={signInWithGoogle}
+        disabled={!googleReady || googleLoading}
+      >
+        {googleLoading ? (
+          <ActivityIndicator color="#000" />
+        ) : (
+          <>
+            <Ionicons name="logo-google" size={20} color="#000" />
+            <Text className="text-black font-semibold ml-2">
+              Continuar con Google
+            </Text>
+          </>
+        )}
+      </TouchableOpacity>
+
+      {/* ── Divisor ─────────────────────────────────────────── */}
+      <View className="flex-row items-center mb-6">
+        <View className="flex-1 h-px bg-slate-700" />
+        <Text className="text-slate-500 mx-4">o con email</Text>
+        <View className="flex-1 h-px bg-slate-700" />
+      </View>
 
       {/* ── Inputs ─────────────────────────────────────────── */}
       <TextInput
@@ -93,12 +111,11 @@ export default function LoginScreen() {
         className="bg-slate-800 text-white p-4 rounded-xl mb-6"
         placeholder="Contraseña"
         placeholderTextColor="#64748b"
-        secureTextEntry  // Oculta el texto
+        secureTextEntry
         value={password}
         onChangeText={setPassword}
       />
 
-      {/* ── Botón de login ──────────────────────────────────── */}
       <TouchableOpacity
         className="bg-indigo-500 p-4 rounded-xl items-center active:bg-indigo-600"
         onPress={handleLogin}
@@ -106,7 +123,6 @@ export default function LoginScreen() {
         <Text className="text-white font-semibold text-lg">Entrar</Text>
       </TouchableOpacity>
 
-      {/* ── Enlace a registro ───────────────────────────────── */}
       <TouchableOpacity
         className="mt-4 items-center"
         onPress={() => router.push("/auth/register")}

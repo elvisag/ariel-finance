@@ -32,7 +32,9 @@ class User(Base):
       id              : UUID único (generado automáticamente)
       email           : Email del usuario (único, usado para login)
       name            : Nombre visible en la app
-      password_hash   : Hash bcrypt de la contraseña (NUNCA texto plano)
+      password_hash   : Hash bcrypt de la contraseña (NUNCA texto plano).
+                        NULL si el usuario solo usa Google OAuth.
+      google_id       : ID único de Google (NULL si usa email/contraseña).
       is_active       : Si el usuario puede o no iniciar sesión
       created_at      : Fecha de registro
       updated_at      : Última modificación del perfil
@@ -53,11 +55,18 @@ class User(Base):
         nullable=False,
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    password_hash: Mapped[str] = mapped_column(
+    password_hash: Mapped[str | None] = mapped_column(
         String(255),
-        nullable=False,
+        nullable=True,
         # 👆 Guardamos el hash, no la contraseña
-        # El hash bcrypt tiene ~60 caracteres, pero 255 por si cambiamos de algoritmo
+        # NULL cuando el usuario se registró con Google
+    )
+    google_id: Mapped[str | None] = mapped_column(
+        String(255),
+        unique=True,
+        nullable=True,
+        # ID único de Google (sub del JWT).
+        # NULL cuando el usuario se registró con email/contraseña.
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(
