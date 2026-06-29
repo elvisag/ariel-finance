@@ -6,13 +6,12 @@ Aplicación móvil de finanzas personales multi-usuario. Permite gestionar ingre
 
 | Capa | Tecnología |
 |------|-----------|
-| **Frontend** | Expo (React Native) + TypeScript + NativeWind |
-| **Backend** | FastAPI (Python 3.12) + SQLAlchemy async |
+| **Frontend** | Expo (React Native) + TypeScript + NativeWind + Zustand + React Query |
+| **Backend** | FastAPI (Python 3.12) + SQLAlchemy async + Pydantic v2 |
 | **Base de datos** | PostgreSQL (producción) / SQLite (desarrollo) |
 | **Autenticación** | JWT (python-jose + bcrypt) + Google OAuth (expo-auth-session) |
-| **Cache** | Redis |
 | **Testing** | Jest (frontend) + pytest (backend) |
-| **Infraestructura** | Docker Compose |
+| **Infraestructura** | Docker Compose (PostgreSQL + Redis + Backend) |
 
 ## Estructura del proyecto
 
@@ -24,19 +23,20 @@ ariel-finance/
 │   │   ├── core/            # Config, seguridad, base de datos
 │   │   ├── models/          # SQLAlchemy: User, Account, Transaction, Category, Budget
 │   │   ├── schemas/         # Pydantic (validación y serialización)
-│   │   └── services/        # Lógica de negocio
-│   ├── alembic/             # Migraciones
+│   │   └── services/        # Lógica de negocio (pendiente)
+│   ├── alembic/             # Migraciones (pendiente generar)
 │   └── tests/
 ├── mobile/                  # App móvil (Expo Router)
 │   ├── app/                 # Pantallas (file-based routing)
 │   │   ├── auth/            # Login / Registro (email + Google OAuth)
+│   │   ├── accounts/        # CRUD de cuentas (listado + formulario)
 │   │   └── (tabs)/          # Inicio, Movimientos, Añadir, Presupuestos, Perfil
-│   ├── components/          # UI reutilizable
-│   ├── hooks/               # Hooks personalizados (useGoogleAuth)
+│   ├── components/          # 7 componentes reutilizables (Button, Input, Card, etc.)
+│   ├── hooks/               # 11 hooks con React Query
 │   ├── services/            # Cliente API (Axios + SecureStore)
-│   ├── store/               # Estado global (Zustand)
+│   ├── store/               # Estado global (Zustand) — solo auth
 │   ├── __mocks__/           # Mocks para tests
-│   └── tests/               # Tests unitarios
+│   └── tests/               # 32 tests unitarios
 ├── docker-compose.yml
 └── .gitignore
 ```
@@ -80,33 +80,73 @@ npx expo start
 
 Escanea el código QR con Expo Go en tu celular (misma red WiFi).
 
+## Variables de entorno
+
+### Backend (`backend/.env`)
+```
+DATABASE_URL=sqlite+aiosqlite:///./ariel_finance.db
+SECRET_KEY=super-secret-key-change-in-production
+GOOGLE_CLIENT_ID=<tu-google-client-id>
+```
+
+### Frontend (`mobile/.env`)
+```
+EXPO_PUBLIC_API_URL=http://<tu-ip>:8000/api/v1
+EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=<ios-client-id>
+EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID=<android-client-id>
+EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=<web-client-id>
+```
+
 ## API Endpoints
 
+### Auth
 | Método | Ruta | Descripción |
 |--------|------|-------------|
 | POST | `/api/v1/auth/register` | Registrar usuario (email + contraseña) |
 | POST | `/api/v1/auth/login` | Iniciar sesión (email + contraseña) |
 | POST | `/api/v1/auth/google` | Iniciar sesión o registrarse con Google OAuth |
-| GET | `/api/v1/users/me` | Perfil del usuario |
-| GET | `/api/v1/accounts/` | Listar cuentas |
+| GET | `/api/v1/users/me` | Perfil del usuario autenticado |
+
+### Accounts
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/api/v1/accounts/` | Listar cuentas del usuario |
 | POST | `/api/v1/accounts/` | Crear cuenta |
-| GET | `/api/v1/transactions/` | Listar transacciones (con filtros) |
-| POST | `/api/v1/transactions/` | Crear transacción |
-| DELETE | `/api/v1/transactions/{id}` | Eliminar transacción |
-| GET | `/api/v1/categories/` | Listar categorías |
-| POST | `/api/v1/categories/` | Crear categoría |
-| GET | `/api/v1/budgets/` | Listar presupuestos |
+| GET | `/api/v1/accounts/{id}` | Obtener cuenta por ID |
+| PUT | `/api/v1/accounts/{id}` | Actualizar cuenta (campos opcionales) |
+| DELETE | `/api/v1/accounts/{id}` | Eliminar cuenta (cascade a transacciones) |
+
+### Transactions
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/api/v1/transactions/` | Listar transacciones (filtros: account_id, start_date, end_date, type) |
+| POST | `/api/v1/transactions/` | Crear transacción (auto-actualiza balance) |
+| DELETE | `/api/v1/transactions/{id}` | Eliminar transacción (revierte balance) |
+
+### Categories
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/api/v1/categories/` | Listar categorías (globales + propias) |
+| POST | `/api/v1/categories/` | Crear categoría personalizada |
+| DELETE | `/api/v1/categories/{id}` | Eliminar categoría propia |
+
+### Budgets
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/api/v1/budgets/` | Listar presupuestos del usuario |
 | POST | `/api/v1/budgets/` | Crear presupuesto |
+| PUT | `/api/v1/budgets/{id}` | Actualizar presupuesto |
+| DELETE | `/api/v1/budgets/{id}` | Eliminar presupuesto |
 
 ## Base de datos
 
 Modelos principales:
 
-- **User** — id, email, name, password_hash (nullable si usa Google), google_id (nullable si usa email)
-- **Account** — user_id, name, type (checking/savings/credit), balance, currency
-- **Transaction** — account_id, category_id, amount, type (income/expense), description, date
-- **Category** — user_id, name, icon, color, type (income/expense)
-- **Budget** — user_id, category_id, amount, period (weekly/monthly/yearly)
+- **User** — id (UUID), email (unique), name, password_hash (nullable), google_id (nullable, unique)
+- **Account** — user_id (FK), name, type (checking/savings/credit/investment/cash), balance, currency
+- **Transaction** — account_id (FK), category_id (FK nullable), amount, type (income/expense/transfer), description, date
+- **Category** — user_id (FK nullable = global), name, icon, color, type (income/expense)
+- **Budget** — user_id (FK), category_id (FK), amount, period (weekly/monthly/yearly), start_date, end_date
 
 ## Licencia
 
