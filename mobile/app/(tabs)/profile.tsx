@@ -36,6 +36,11 @@ export default function ProfileScreen() {
             <Text className="text-text-primary ml-3">Mis cuentas</Text>
           </TouchableOpacity>
           <View className="h-px bg-border my-1" />
+          <TouchableOpacity className="flex-row items-center py-3" onPress={() => router.push("/categories")}>
+            <Ionicons name="pricetags-outline" size={22} color="#c0c0f8" />
+            <Text className="text-text-primary ml-3">Categorías</Text>
+          </TouchableOpacity>
+          <View className="h-px bg-border my-1" />
           <TouchableOpacity className="flex-row items-center py-3">
             <Ionicons name="settings-outline" size={22} color="#a0a0a0" />
             <Text className="text-text-primary ml-3">Configuración</Text>
