@@ -20,7 +20,7 @@ from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.models.account import Account
 from app.models.user import User
-from app.schemas.account import AccountCreate, AccountResponse
+from app.schemas.account import AccountCreate, AccountUpdate, AccountResponse
 
 router = APIRouter(prefix="/accounts", tags=["accounts"])
 
@@ -78,7 +78,7 @@ async def get_account(
     result = await db.execute(
         select(Account).where(
             Account.id == account_id,
-            Account.user_id == current_user.id,  # ← Filtro de seguridad
+            Account.user_id == current_user.id,
         )
     )
     account = result.scalar_one_or_none()
@@ -88,3 +88,53 @@ async def get_account(
             detail="Cuenta no encontrada",
         )
     return account
+
+
+@router.put("/{account_id}", response_model=AccountResponse)
+async def update_account(
+    account_id: uuid.UUID,
+    payload: AccountUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Account).where(
+            Account.id == account_id,
+            Account.user_id == current_user.id,
+        )
+    )
+    account = result.scalar_one_or_none()
+    if not account:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Cuenta no encontrada",
+        )
+
+    update_data = payload.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(account, field, value)
+
+    await db.flush()
+    return account
+
+
+@router.delete("/{account_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_account(
+    account_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Account).where(
+            Account.id == account_id,
+            Account.user_id == current_user.id,
+        )
+    )
+    account = result.scalar_one_or_none()
+    if not account:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Cuenta no encontrada",
+        )
+
+    await db.delete(account)

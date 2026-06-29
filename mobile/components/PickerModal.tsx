@@ -1,11 +1,11 @@
 import { Modal, View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
-interface PickerOption {
+export interface PickerOption {
   id: string;
   label: string;
   subtitle?: string;
-  icon?: keyof typeof Ionicons.glyphMap;
+  icon?: string;
   color?: string;
 }
 
@@ -52,14 +52,14 @@ export default function PickerModal({
                     onClose();
                   }}
                 >
-                  {opt.icon && (
-                    <View
-                      className="w-10 h-10 rounded-full items-center justify-center mr-3"
-                      style={{ backgroundColor: opt.color ? `${opt.color}20` : "#383838" }}
-                    >
-                      <Ionicons name={opt.icon} size={20} color={opt.color || "#a0a0a0"} />
-                    </View>
-                  )}
+              {opt.icon && (
+                  <View
+                    className="w-10 h-10 rounded-full items-center justify-center mr-3"
+                    style={{ backgroundColor: opt.color ? `${opt.color}20` : "#383838" }}
+                  >
+                    <Ionicons name={opt.icon as any} size={20} color={opt.color || "#a0a0a0"} />
+                  </View>
+                )}
                   <View className="flex-1">
                     <Text className={`text-text-primary font-medium ${selected ? "text-primary-300" : ""}`}>
                       {opt.label}

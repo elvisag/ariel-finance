@@ -3,7 +3,7 @@
 
 from app.schemas.auth import RegisterRequest, LoginRequest, GoogleAuthRequest, TokenResponse
 from app.schemas.user import UserResponse
-from app.schemas.account import AccountCreate, AccountResponse
+from app.schemas.account import AccountCreate, AccountUpdate, AccountResponse
 from app.schemas.category import CategoryCreate, CategoryResponse
 from app.schemas.transaction import TransactionCreate, TransactionResponse
 from app.schemas.budget import BudgetCreate, BudgetResponse

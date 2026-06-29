@@ -118,6 +118,13 @@ export const accountsApi = {
 
   /** Obtener una cuenta específica por ID */
   get: (id: string) => api.get<Account>(`/accounts/${id}`),
+
+  /** Actualizar una cuenta */
+  update: (id: string, data: Partial<Omit<Account, "id" | "created_at">>) =>
+    api.put<Account>(`/accounts/${id}`, data),
+
+  /** Eliminar una cuenta */
+  delete: (id: string) => api.delete(`/accounts/${id}`),
 };
 
 export const transactionsApi = {
