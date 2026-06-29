@@ -47,6 +47,11 @@ export default function ProfileScreen() {
             <Text className="text-text-primary ml-3">Categorías</Text>
           </TouchableOpacity>
           <View className="h-px bg-border my-1" />
+          <TouchableOpacity className="flex-row items-center py-3" onPress={() => router.push("/recurring")}>
+            <Ionicons name="repeat-outline" size={22} color="#c0c0f8" />
+            <Text className="text-text-primary ml-3">Gastos recurrentes</Text>
+          </TouchableOpacity>
+          <View className="h-px bg-border my-1" />
           <TouchableOpacity className="flex-row items-center py-3">
             <Ionicons name="settings-outline" size={22} color="#a0a0a0" />
             <Text className="text-text-primary ml-3">Configuración</Text>

@@ -20,6 +20,7 @@ async def list_transactions(
     start_date: date | None = None,
     end_date: date | None = None,
     type: str | None = None,
+    is_recurring: bool | None = None,
 ) -> list[Transaction]:
     query = select(Transaction).join(Account).where(Account.user_id == user.id)
     if account_id:
@@ -30,6 +31,8 @@ async def list_transactions(
         query = query.where(Transaction.transaction_date <= end_date)
     if type:
         query = query.where(Transaction.type == type)
+    if is_recurring is not None:
+        query = query.where(Transaction.is_recurring == is_recurring)
     query = query.order_by(Transaction.transaction_date.desc())
     result = await db.execute(query)
     return list(result.scalars().all())

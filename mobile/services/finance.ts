@@ -157,6 +157,7 @@ export const transactionsApi = {
     start_date?: string;
     end_date?: string;
     type?: string;
+    is_recurring?: boolean;
   }) => api.get<Transaction[]>("/transactions/", { params }),
 
   /** Crear una nueva transacción */

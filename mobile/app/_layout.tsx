@@ -65,6 +65,7 @@ export default function RootLayout() {
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="accounts" options={{ headerShown: false }} />
             <Stack.Screen name="categories" options={{ headerShown: false }} />
+          <Stack.Screen name="recurring" options={{ headerShown: false }} />
           </Stack>
           <StatusBar style={theme === "dark" ? "light" : "dark"} />
         </View>
