@@ -1,123 +1,87 @@
-/**
- * Pantalla para añadir una nueva transacción.
- * ============================================
- *
- * Formulario para registrar un ingreso o un gasto.
- *
- * Campos:
- *   - Tipo: ingreso (verde) / gasto (rojo) — selector visual
- *   - Monto: input numérico con teclado decimal
- *   - Descripción: texto libre
- *
- * Pendiente de implementar:
- *   - Selector de cuenta (ahora usa la primera disponible)
- *   - Selector de categoría
- *   - Selector de fecha (ahora usa la fecha actual)
- *   - Conexión con el API
- *
- * UX:
- *   - El teclado numérico aparece automáticamente para el monto
- *   - Diseño limpio con focus en el monto (letra grande)
- */
-
 import { useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-} from "react-native";
+import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import ScreenLayout from "../../components/ScreenLayout";
+import Card from "../../components/Card";
+import Input from "../../components/Input";
+import Button from "../../components/Button";
 
-// Opciones para el selector de tipo (ingreso/gasto)
-const TYPES = [
-  { key: "income", label: "Ingreso", icon: "trending-up", color: "#10b981" },
-  { key: "expense", label: "Gasto", icon: "trending-down", color: "#ef4444" },
-];
+type TransactionType = "income" | "expense" | "transfer";
 
-export default function AddTransactionScreen() {
-  const [type, setType] = useState<"income" | "expense">("expense");
+export default function AddScreen() {
+  const [type, setType] = useState<TransactionType>("expense");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const router = useRouter();
 
   const handleSubmit = () => {
     // TODO: Conectar con el API
-    // const payload = {
-    //   account_id: selectedAccount.id,
-    //   amount: parseFloat(amount),
-    //   type,
-    //   description,
-    //   transaction_date: new Date().toISOString().split("T")[0],
-    // };
-    // await transactionsApi.create(payload);
     router.back();
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      className="flex-1 bg-slate-950"
-    >
-      {/* ── Header con botón cerrar ─────────────────────────── */}
-      <View className="px-6 pt-16 pb-4">
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="close" size={28} color="#94a3b8" />
-        </TouchableOpacity>
-        <Text className="text-white text-3xl font-bold mt-4">
-          Nuevo movimiento
-        </Text>
-      </View>
+    <ScreenLayout>
+      <ScrollView className="flex-1">
+        <View className="px-6 pt-16 pb-4 flex-row items-center">
+          <TouchableOpacity onPress={() => router.back()} className="mr-4">
+            <Ionicons name="close" size={24} color="#f8f8f8" />
+          </TouchableOpacity>
+          <Text className="text-text-primary text-2xl font-bold">Añadir movimiento</Text>
+        </View>
 
-      <View className="px-6">
-        {/* ── Selector de tipo (ingreso/gasto) ──────────────── */}
-        <View className="flex-row gap-3 mb-6">
-          {TYPES.map((t) => (
+        <View className="flex-row mx-6 mb-6 bg-bg-surface rounded-xl p-1">
+          {(["expense", "income", "transfer"] as const).map((t) => (
             <TouchableOpacity
-              key={t.key}
-              className={`flex-1 p-4 rounded-2xl items-center ${
-                type === t.key ? "bg-slate-700" : "bg-slate-800/50"
-              }`}
-              onPress={() => setType(t.key as "income" | "expense")}
+              key={t}
+              className={`flex-1 py-3 rounded-lg items-center ${type === t ? "bg-primary-300" : ""}`}
+              onPress={() => setType(t)}
             >
-              <Ionicons name={t.icon as any} size={24} color={t.color} />
-              <Text className="text-white mt-1">{t.label}</Text>
+              <Text className={`font-semibold ${type === t ? "text-bg" : "text-text-secondary"}`}>
+                {t === "expense" ? "Gasto" : t === "income" ? "Ingreso" : "Transferencia"}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* ── Monto ─────────────────────────────────────────── */}
-        <Text className="text-slate-400 mb-2">Monto</Text>
-        <TextInput
-          className="bg-slate-800 text-white text-3xl font-bold p-4 rounded-xl mb-4"
-          placeholder="$0.00"
-          placeholderTextColor="#475569"
-          keyboardType="decimal-pad"
-          value={amount}
-          onChangeText={setAmount}
-        />
+        <Card className="mx-6 mb-6">
+          <Input
+            placeholder="$ 0.00"
+            keyboardType="decimal-pad"
+            value={amount}
+            onChangeText={setAmount}
+          />
+          <Input
+            placeholder="Descripción (opcional)"
+            value={description}
+            onChangeText={setDescription}
+          />
+        </Card>
 
-        {/* ── Descripción ────────────────────────────────────── */}
-        <Text className="text-slate-400 mb-2">Descripción</Text>
-        <TextInput
-          className="bg-slate-800 text-white p-4 rounded-xl mb-6"
-          placeholder="¿En qué gastaste?"
-          placeholderTextColor="#475569"
-          value={description}
-          onChangeText={setDescription}
-        />
+        <Card className="mx-6 mb-6">
+          <Text className="text-text-secondary text-sm mb-3">Cuenta</Text>
+          <TouchableOpacity className="bg-bg-surface rounded-xl p-4 flex-row items-center justify-between">
+            <View className="flex-row items-center">
+              <Ionicons name="wallet-outline" size={20} color="#a0a0a0" />
+              <Text className="text-text-primary ml-3">Seleccionar cuenta</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#707070" />
+          </TouchableOpacity>
 
-        {/* ── Botón de guardar ──────────────────────────────── */}
-        <TouchableOpacity
-          className="bg-indigo-500 p-4 rounded-xl items-center mt-4"
-          onPress={handleSubmit}
-        >
-          <Text className="text-white font-semibold text-lg">Guardar</Text>
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+          <Text className="text-text-secondary text-sm mb-3 mt-4">Categoría</Text>
+          <TouchableOpacity className="bg-bg-surface rounded-xl p-4 flex-row items-center justify-between">
+            <View className="flex-row items-center">
+              <Ionicons name="pricetag-outline" size={20} color="#a0a0a0" />
+              <Text className="text-text-primary ml-3">Seleccionar categoría</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#707070" />
+          </TouchableOpacity>
+        </Card>
+
+        <View className="px-6 mb-8">
+          <Button title="Guardar" onPress={handleSubmit} size="lg" />
+        </View>
+      </ScrollView>
+    </ScreenLayout>
   );
 }

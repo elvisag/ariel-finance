@@ -23,7 +23,6 @@
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  // Rutas donde buscar clases Tailwind
   content: ["./app/**/*.{js,jsx,ts,tsx}", "./components/**/*.{js,jsx,ts,tsx}"],
 
   presets: [require("nativewind/preset")],
@@ -31,26 +30,46 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Paleta primaria de la app (indigo)
+        // Fondos oscuros neutros (basado en el diseño de referencia)
+        bg: {
+          DEFAULT: "#181818",
+          surface: "#383838",
+          elevated: "#484848",
+          hover: "#404040",
+        },
+
+        // Texto (blancos cálidos y grises)
+        text: {
+          primary: "#f8f8f8",
+          secondary: "#a0a0a0",
+          muted: "#707070",
+        },
+
+        // Acento periwinkle (de la imagen de referencia)
         primary: {
-          50: "#eef2ff",
-          100: "#e0e7ff",
-          200: "#c7d2fe",
-          300: "#a5b4fc",
-          400: "#818cf8",
-          500: "#6366f1",  // ← Color principal (botones, acentos)
-          600: "#4f46e5",
-          700: "#4338ca",
-          800: "#3730a3",
-          900: "#312e81",
+          50: "#f0f0ff",
+          100: "#e0e0ff",
+          200: "#d0d0ff",
+          300: "#c0c0f8",  // Color principal (botones, acentos)
+          400: "#a0a0d8",
+          500: "#8080b8",
+          600: "#6868a0",
+          700: "#505088",
+          800: "#383870",
+          900: "#202058",
+        },
+
+        border: {
+          DEFAULT: "#303030",
+          light: "#484848",
         },
 
         // Colores semánticos para finanzas
         finance: {
-          income: "#10b981",      // Verde esmeralda
-          expense: "#ef4444",     // Rojo
-          savings: "#3b82f6",     // Azul
-          investment: "#8b5cf6",  // Púrpura
+          income: "#10b981",
+          expense: "#ef4444",
+          savings: "#3b82f6",
+          investment: "#8b5cf6",
         },
       },
     },
