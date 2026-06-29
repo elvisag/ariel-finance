@@ -19,15 +19,30 @@ Flujo de una petición típica:
 """
 
 import asyncio
+from pathlib import Path
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from alembic.config import Config
+from alembic import command
 
 from app.api.v1 import auth, users, accounts, categories, transactions, budgets, analytics
 from app.core.config import settings
-from app.core.database import engine, Base
+from app.core.database import engine
 from app.core.scheduler import start_scheduler
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+def run_alembic_migration():
+    """
+    Ejecuta migraciones pendientes al iniciar la app.
+    Si no hay migraciones, stamp ea la revisión actual.
+    """
+    alembic_cfg = Config(BASE_DIR / "alembic.ini")
+    alembic_cfg.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+    command.upgrade(alembic_cfg, "head")
 
 
 @asynccontextmanager
@@ -36,7 +51,7 @@ async def lifespan(app: FastAPI):
     Maneja el ciclo de vida de la aplicación.
 
     startup:
-      - Crea todas las tablas definidas en models/ si no existen.
+      - Ejecuta migraciones Alembic pendientes.
       - Inicia el scheduler de transacciones recurrentes.
 
     shutdown:
@@ -44,8 +59,8 @@ async def lifespan(app: FastAPI):
       - Cierra el engine de SQLAlchemy.
     """
     # ── Startup ──
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, run_alembic_migration)
     scheduler_task = start_scheduler()
     yield
     # ── Shutdown ──
