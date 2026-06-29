@@ -6,6 +6,11 @@ import ScreenLayout from "../../components/ScreenLayout";
 import Card from "../../components/Card";
 import Input from "../../components/Input";
 import Button from "../../components/Button";
+import ErrorMessage from "../../components/ErrorMessage";
+import PickerModal from "../../components/PickerModal";
+import { useAccounts } from "../../hooks/useAccounts";
+import { useCategories } from "../../hooks/useCategories";
+import { useCreateTransaction } from "../../hooks/useTransactions";
 
 type TransactionType = "income" | "expense" | "transfer";
 
@@ -13,12 +18,66 @@ export default function AddScreen() {
   const [type, setType] = useState<TransactionType>("expense");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [showAccountPicker, setShowAccountPicker] = useState(false);
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [error, setError] = useState("");
   const router = useRouter();
 
-  const handleSubmit = () => {
-    // TODO: Conectar con el API
-    router.back();
+  const { data: accounts, isLoading: loadingAccounts } = useAccounts();
+  const { data: categories, isLoading: loadingCategories } = useCategories();
+  const createTransaction = useCreateTransaction();
+
+  const filteredCategories = (categories || []).filter((c) => c.type === type);
+
+  const selectedAccount = accounts?.find((a) => a.id === selectedAccountId);
+  const selectedCategory = categories?.find((c) => c.id === selectedCategoryId);
+
+  const handleSubmit = async () => {
+    try {
+      setError("");
+
+      if (!selectedAccountId) {
+        setError("Seleccioná una cuenta");
+        return;
+      }
+
+      const parsedAmount = parseFloat(amount.replace(",", "."));
+      if (isNaN(parsedAmount) || parsedAmount <= 0) {
+        setError("Ingresá un monto válido");
+        return;
+      }
+
+      await createTransaction.mutateAsync({
+        account_id: selectedAccountId,
+        category_id: selectedCategoryId,
+        amount: parsedAmount,
+        description: description || null,
+        type,
+        transaction_date: new Date().toISOString().split("T")[0],
+        is_recurring: false,
+      });
+
+      router.back();
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "Error al guardar la transacción");
+    }
   };
+
+  const accountOptions = (accounts || []).map((a) => ({
+    id: a.id,
+    label: a.name,
+    subtitle: `$${a.balance.toFixed(2)}`,
+    icon: "wallet-outline" as const,
+  }));
+
+  const categoryOptions = filteredCategories.map((c) => ({
+    id: c.id,
+    label: c.name,
+    icon: (c.icon || "pricetag-outline") as keyof typeof Ionicons.glyphMap,
+    color: c.color,
+  }));
 
   return (
     <ScreenLayout>
@@ -35,7 +94,10 @@ export default function AddScreen() {
             <TouchableOpacity
               key={t}
               className={`flex-1 py-3 rounded-lg items-center ${type === t ? "bg-primary-300" : ""}`}
-              onPress={() => setType(t)}
+              onPress={() => {
+                setType(t);
+                setSelectedCategoryId(null);
+              }}
             >
               <Text className={`font-semibold ${type === t ? "text-bg" : "text-text-secondary"}`}>
                 {t === "expense" ? "Gasto" : t === "income" ? "Ingreso" : "Transferencia"}
@@ -60,28 +122,66 @@ export default function AddScreen() {
 
         <Card className="mx-6 mb-6">
           <Text className="text-text-secondary text-sm mb-3">Cuenta</Text>
-          <TouchableOpacity className="bg-bg-surface rounded-xl p-4 flex-row items-center justify-between">
-            <View className="flex-row items-center">
+          <TouchableOpacity
+            className="bg-bg-surface rounded-xl p-4 flex-row items-center justify-between"
+            onPress={() => setShowAccountPicker(true)}
+          >
+            <View className="flex-row items-center flex-1">
               <Ionicons name="wallet-outline" size={20} color="#a0a0a0" />
-              <Text className="text-text-primary ml-3">Seleccionar cuenta</Text>
+              <Text className={`ml-3 ${selectedAccount ? "text-text-primary" : "text-text-muted"}`}>
+                {selectedAccount ? selectedAccount.name : loadingAccounts ? "Cargando..." : "Seleccionar cuenta"}
+              </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#707070" />
           </TouchableOpacity>
 
           <Text className="text-text-secondary text-sm mb-3 mt-4">Categoría</Text>
-          <TouchableOpacity className="bg-bg-surface rounded-xl p-4 flex-row items-center justify-between">
-            <View className="flex-row items-center">
+          <TouchableOpacity
+            className="bg-bg-surface rounded-xl p-4 flex-row items-center justify-between"
+            onPress={() => setShowCategoryPicker(true)}
+          >
+            <View className="flex-row items-center flex-1">
               <Ionicons name="pricetag-outline" size={20} color="#a0a0a0" />
-              <Text className="text-text-primary ml-3">Seleccionar categoría</Text>
+              <Text className={`ml-3 ${selectedCategory ? "text-text-primary" : "text-text-muted"}`}>
+                {selectedCategory
+                  ? selectedCategory.name
+                  : loadingCategories
+                    ? "Cargando..."
+                    : "Seleccionar categoría"}
+              </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#707070" />
           </TouchableOpacity>
         </Card>
 
         <View className="px-6 mb-8">
-          <Button title="Guardar" onPress={handleSubmit} size="lg" />
+          <ErrorMessage message={error} className="mb-4" />
+          <Button
+            title="Guardar"
+            onPress={handleSubmit}
+            size="lg"
+            loading={createTransaction.isPending}
+          />
         </View>
       </ScrollView>
+
+      <PickerModal
+        open={showAccountPicker}
+        onClose={() => setShowAccountPicker(false)}
+        title="Seleccionar cuenta"
+        options={accountOptions}
+        selectedId={selectedAccountId || undefined}
+        onSelect={setSelectedAccountId}
+      />
+
+      <PickerModal
+        open={showCategoryPicker}
+        onClose={() => setShowCategoryPicker(false)}
+        title="Seleccionar categoría"
+        options={categoryOptions}
+        selectedId={selectedCategoryId || undefined}
+        onSelect={setSelectedCategoryId}
+      />
     </ScreenLayout>
   );
 }
