@@ -1,4 +1,6 @@
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useColorScheme as useSystemColorScheme } from "react-native";
 
 export type Theme = "dark" | "light" | "system";
@@ -8,10 +10,18 @@ interface ThemeState {
   setPreference: (t: Theme) => void;
 }
 
-export const useThemeStore = create<ThemeState>((set) => ({
-  preference: "system",
-  setPreference: (t: Theme) => set({ preference: t }),
-}));
+export const useThemeStore = create<ThemeState>()(
+  persist(
+    (set) => ({
+      preference: "system",
+      setPreference: (t: Theme) => set({ preference: t }),
+    }),
+    {
+      name: "ariel-finance-theme",
+      storage: createJSONStorage(() => AsyncStorage),
+    },
+  ),
+);
 
 export function useEffectiveTheme(): "dark" | "light" {
   const preference = useThemeStore((s) => s.preference);
