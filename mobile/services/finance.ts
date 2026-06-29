@@ -186,6 +186,38 @@ export const categoriesApi = {
   delete: (id: string) => api.delete(`/categories/${id}`),
 };
 
+export interface MonthlySummary {
+  year: number;
+  month: number;
+  total_income: number;
+  total_expense: number;
+  balance: number;
+  transaction_count: number;
+  categories: { name: string; total: number; count: number }[];
+}
+
+export interface MonthlyTrend {
+  months: { month: string; income: number; expense: number }[];
+}
+
+export interface SpendingByCategory {
+  total: number;
+  categories: { name: string; total: number; count: number; percentage: number }[];
+  start_date: string;
+  end_date: string;
+}
+
+export const analyticsApi = {
+  monthlySummary: (year?: number, month?: number) =>
+    api.get<MonthlySummary>("/analytics/monthly-summary", { params: { year, month } }),
+
+  monthlyTrend: (months: number = 6) =>
+    api.get<MonthlyTrend>("/analytics/monthly-trend", { params: { months } }),
+
+  spendingByCategory: (start_date?: string, end_date?: string) =>
+    api.get<SpendingByCategory>("/analytics/spending-by-category", { params: { start_date, end_date } }),
+};
+
 export const budgetsApi = {
   /** Listar presupuestos del usuario */
   list: () => api.get<Budget[]>("/budgets/"),

@@ -103,6 +103,16 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
+        <View className="mx-6 mt-4">
+          <TouchableOpacity
+            className="bg-bg-surface p-4 rounded-2xl flex-row items-center justify-center"
+            onPress={() => router.push("/reports")}
+          >
+            <Ionicons name="stats-chart" size={20} color="#c0c0f8" />
+            <Text className="text-text-primary ml-2 font-semibold">Ver reportes</Text>
+          </TouchableOpacity>
+        </View>
+
         <View className="mx-6 mt-8 mb-8">
           <Text className="text-text-primary text-xl font-bold mb-4">Últimos movimientos</Text>
           {recent.length === 0 ? (
