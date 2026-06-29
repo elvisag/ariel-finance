@@ -1,5 +1,5 @@
-import { useState, useMemo, useCallback } from "react";
-import { View, Text, FlatList, TouchableOpacity, Alert } from "react-native";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { View, Text, FlatList, TouchableOpacity, Alert, TextInput } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import ScreenLayout from "../../components/ScreenLayout";
@@ -45,18 +45,28 @@ export default function TransactionsScreen() {
   const [filterType, setFilterType] = useState<FilterType>("all");
   const [filterAccountId, setFilterAccountId] = useState<string | undefined>();
   const [showAccountPicker, setShowAccountPicker] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   const { data: accounts } = useAccounts();
   const deleteTx = useDeleteTransaction();
 
   const params = useMemo(() => {
-    const p: { type?: string; account_id?: string } = {};
+    const p: { type?: string; account_id?: string; search?: string } = {};
     if (filterType !== "all") p.type = filterType;
     if (filterAccountId) p.account_id = filterAccountId;
+    if (debouncedSearch) p.search = debouncedSearch;
     return Object.keys(p).length > 0 ? p : undefined;
-  }, [filterType, filterAccountId]);
+  }, [filterType, filterAccountId, debouncedSearch]);
 
   const { data: transactions, isLoading, isError, error, refetch, isRefetching } = useTransactions(params);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setDebouncedSearch(searchText), 300);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [searchText]);
 
   const grouped = useMemo(() => groupByDate(transactions || []), [transactions]);
 
@@ -114,6 +124,24 @@ export default function TransactionsScreen() {
     <ScreenLayout>
       <View className="px-6 pt-16 pb-4">
         <Text className="text-text-primary text-3xl font-bold">Movimientos</Text>
+      </View>
+
+      <View className="px-6 mb-4">
+        <View className="flex-row items-center bg-bg-surface rounded-xl px-4 border border-border">
+          <Ionicons name="search" size={18} color="#707070" />
+          <TextInput
+            className="flex-1 py-3 px-3 text-text-primary"
+            placeholder="Buscar por descripción..."
+            placeholderTextColor="#707070"
+            value={searchText}
+            onChangeText={setSearchText}
+          />
+          {searchText ? (
+            <TouchableOpacity onPress={() => setSearchText("")}>
+              <Ionicons name="close-circle" size={18} color="#707070" />
+            </TouchableOpacity>
+          ) : null}
+        </View>
       </View>
 
       <View className="px-6 mb-4 flex-row gap-2">

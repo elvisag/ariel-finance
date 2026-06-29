@@ -8,6 +8,7 @@ export function useTransactions(params?: {
   end_date?: string;
   type?: string;
   is_recurring?: boolean;
+  search?: string;
 }) {
   return useQuery({
     queryKey: ["transactions", params],

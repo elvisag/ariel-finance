@@ -20,10 +20,11 @@ async def list_transactions(
     end_date: date | None = None,
     type: str | None = None,
     is_recurring: bool | None = None,
+    search: str | None = None,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    return await transaction_service.list_transactions(db, current_user, account_id, start_date, end_date, type, is_recurring)
+    return await transaction_service.list_transactions(db, current_user, account_id, start_date, end_date, type, is_recurring, search)
 
 
 @router.post("/", response_model=TransactionResponse, status_code=status.HTTP_201_CREATED)
