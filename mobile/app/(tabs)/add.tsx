@@ -10,7 +10,7 @@ import ErrorMessage from "../../components/ErrorMessage";
 import PickerModal from "../../components/PickerModal";
 import { useAccounts } from "../../hooks/useAccounts";
 import { useCategories } from "../../hooks/useCategories";
-import { useCreateTransaction, useUpdateTransaction } from "../../hooks/useTransactions";
+import { useCreateTransaction, useUpdateTransaction, useTransferMoney } from "../../hooks/useTransactions";
 import type { Transaction } from "../../services/finance";
 
 type TransactionType = "income" | "expense" | "transfer";
@@ -27,6 +27,8 @@ export default function AddScreen() {
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(editData?.account_id || null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(editData?.category_id || null);
   const [showAccountPicker, setShowAccountPicker] = useState(false);
+  const [showToAccountPicker, setShowToAccountPicker] = useState(false);
+  const [toAccountId, setToAccountId] = useState<string | null>(null);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [error, setError] = useState("");
 
@@ -34,22 +36,21 @@ export default function AddScreen() {
   const { data: categories, isLoading: loadingCategories } = useCategories();
   const createTransaction = useCreateTransaction();
   const updateTransaction = useUpdateTransaction();
+  const transferMoney = useTransferMoney();
 
-  const isPending = createTransaction.isPending || updateTransaction.isPending;
+  const isPending = createTransaction.isPending || updateTransaction.isPending || transferMoney.isPending;
 
-  const filteredCategories = (categories || []).filter((c) => c.type === type);
+  const filteredCategories = type !== "transfer"
+    ? (categories || []).filter((c) => c.type === type)
+    : [];
 
   const selectedAccount = accounts?.find((a) => a.id === selectedAccountId);
+  const selectedToAccount = accounts?.find((a) => a.id === toAccountId);
   const selectedCategory = categories?.find((c) => c.id === selectedCategoryId);
 
   const handleSubmit = async () => {
     try {
       setError("");
-
-      if (!selectedAccountId) {
-        setError("Seleccioná una cuenta");
-        return;
-      }
 
       const parsedAmount = parseFloat(amount.replace(",", "."));
       if (isNaN(parsedAmount) || parsedAmount <= 0) {
@@ -57,20 +58,47 @@ export default function AddScreen() {
         return;
       }
 
-      const payload = {
-        account_id: selectedAccountId,
-        category_id: selectedCategoryId,
-        amount: parsedAmount,
-        description: description || null,
-        type,
-        transaction_date: editData?.transaction_date || new Date().toISOString().split("T")[0],
-        is_recurring: editData?.is_recurring || false,
-      };
+      const today = new Date().toISOString().split("T")[0];
 
-      if (isEditing && editData) {
-        await updateTransaction.mutateAsync({ id: editData.id, data: payload });
+      if (type === "transfer") {
+        if (!selectedAccountId) {
+          setError("Seleccioná la cuenta origen");
+          return;
+        }
+        if (!toAccountId) {
+          setError("Seleccioná la cuenta destino");
+          return;
+        }
+        if (selectedAccountId === toAccountId) {
+          setError("Las cuentas deben ser distintas");
+          return;
+        }
+        await transferMoney.mutateAsync({
+          from_account_id: selectedAccountId,
+          to_account_id: toAccountId,
+          amount: parsedAmount,
+          description: description || null,
+          transaction_date: today,
+        });
       } else {
-        await createTransaction.mutateAsync(payload);
+        if (!selectedAccountId) {
+          setError("Seleccioná una cuenta");
+          return;
+        }
+        const payload = {
+          account_id: selectedAccountId,
+          category_id: selectedCategoryId,
+          amount: parsedAmount,
+          description: description || null,
+          type,
+          transaction_date: editData?.transaction_date || today,
+          is_recurring: editData?.is_recurring || false,
+        };
+        if (isEditing && editData) {
+          await updateTransaction.mutateAsync({ id: editData.id, data: payload });
+        } else {
+          await createTransaction.mutateAsync(payload);
+        }
       }
 
       router.back();
@@ -113,6 +141,7 @@ export default function AddScreen() {
               onPress={() => {
                 setType(t);
                 setSelectedCategoryId(null);
+                setToAccountId(null);
               }}
             >
               <Text className={`font-semibold ${type === t ? "text-bg" : "text-text-secondary"}`}>
@@ -137,7 +166,9 @@ export default function AddScreen() {
         </Card>
 
         <Card className="mx-6 mb-6">
-          <Text className="text-text-secondary text-sm mb-3">Cuenta</Text>
+          <Text className="text-text-secondary text-sm mb-3">
+            {type === "transfer" ? "Cuenta origen" : "Cuenta"}
+          </Text>
           <TouchableOpacity
             className="bg-bg-surface rounded-xl p-4 flex-row items-center justify-between"
             onPress={() => setShowAccountPicker(true)}
@@ -151,23 +182,45 @@ export default function AddScreen() {
             <Ionicons name="chevron-forward" size={20} color="#707070" />
           </TouchableOpacity>
 
-          <Text className="text-text-secondary text-sm mb-3 mt-4">Categoría</Text>
-          <TouchableOpacity
-            className="bg-bg-surface rounded-xl p-4 flex-row items-center justify-between"
-            onPress={() => setShowCategoryPicker(true)}
-          >
-            <View className="flex-row items-center flex-1">
-              <Ionicons name="pricetag-outline" size={20} color="#a0a0a0" />
-              <Text className={`ml-3 ${selectedCategory ? "text-text-primary" : "text-text-muted"}`}>
-                {selectedCategory
-                  ? selectedCategory.name
-                  : loadingCategories
-                    ? "Cargando..."
-                    : "Seleccionar categoría"}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#707070" />
-          </TouchableOpacity>
+          {type === "transfer" && (
+            <>
+              <Text className="text-text-secondary text-sm mb-3 mt-4">Cuenta destino</Text>
+              <TouchableOpacity
+                className="bg-bg-surface rounded-xl p-4 flex-row items-center justify-between"
+                onPress={() => setShowToAccountPicker(true)}
+              >
+                <View className="flex-row items-center flex-1">
+                  <Ionicons name="enter-outline" size={20} color="#a0a0a0" />
+                  <Text className={`ml-3 ${selectedToAccount ? "text-text-primary" : "text-text-muted"}`}>
+                    {selectedToAccount ? selectedToAccount.name : loadingAccounts ? "Cargando..." : "Seleccionar cuenta destino"}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#707070" />
+              </TouchableOpacity>
+            </>
+          )}
+
+          {type !== "transfer" && (
+            <>
+              <Text className="text-text-secondary text-sm mb-3 mt-4">Categoría</Text>
+              <TouchableOpacity
+                className="bg-bg-surface rounded-xl p-4 flex-row items-center justify-between"
+                onPress={() => setShowCategoryPicker(true)}
+              >
+                <View className="flex-row items-center flex-1">
+                  <Ionicons name="pricetag-outline" size={20} color="#a0a0a0" />
+                  <Text className={`ml-3 ${selectedCategory ? "text-text-primary" : "text-text-muted"}`}>
+                    {selectedCategory
+                      ? selectedCategory.name
+                      : loadingCategories
+                        ? "Cargando..."
+                        : "Seleccionar categoría"}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#707070" />
+              </TouchableOpacity>
+            </>
+          )}
         </Card>
 
         <View className="px-6 mb-8">
@@ -184,20 +237,31 @@ export default function AddScreen() {
       <PickerModal
         open={showAccountPicker}
         onClose={() => setShowAccountPicker(false)}
-        title="Seleccionar cuenta"
+        title={type === "transfer" ? "Cuenta origen" : "Seleccionar cuenta"}
         options={accountOptions}
         selectedId={selectedAccountId || undefined}
         onSelect={setSelectedAccountId}
       />
 
       <PickerModal
-        open={showCategoryPicker}
-        onClose={() => setShowCategoryPicker(false)}
-        title="Seleccionar categoría"
-        options={categoryOptions}
-        selectedId={selectedCategoryId || undefined}
-        onSelect={setSelectedCategoryId}
+        open={showToAccountPicker}
+        onClose={() => setShowToAccountPicker(false)}
+        title="Cuenta destino"
+        options={accountOptions.filter((a) => a.id !== selectedAccountId)}
+        selectedId={toAccountId || undefined}
+        onSelect={setToAccountId}
       />
+
+      {!isEditing && type !== "transfer" && (
+        <PickerModal
+          open={showCategoryPicker}
+          onClose={() => setShowCategoryPicker(false)}
+          title="Seleccionar categoría"
+          options={categoryOptions}
+          selectedId={selectedCategoryId || undefined}
+          onSelect={setSelectedCategoryId}
+        />
+      )}
     </ScreenLayout>
   );
 }

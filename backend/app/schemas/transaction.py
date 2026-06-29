@@ -15,16 +15,6 @@ class TransactionCreate(BaseModel):
     is_recurring: bool = False
 
 
-class TransactionUpdate(BaseModel):
-    account_id: uuid.UUID | None = None
-    category_id: uuid.UUID | None = None
-    amount: Decimal | None = None
-    description: str | None = None
-    type: str | None = None
-    transaction_date: date | None = None
-    is_recurring: bool | None = None
-
-
 class TransactionResponse(BaseModel):
     id: uuid.UUID
     account_id: uuid.UUID
@@ -37,3 +27,26 @@ class TransactionResponse(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class TransferCreate(BaseModel):
+    from_account_id: uuid.UUID
+    to_account_id: uuid.UUID
+    amount: Decimal
+    description: str | None = None
+    transaction_date: date
+
+
+class TransferResponse(BaseModel):
+    from_transaction: TransactionResponse
+    to_transaction: TransactionResponse
+
+
+class TransactionUpdate(BaseModel):
+    account_id: uuid.UUID | None = None
+    category_id: uuid.UUID | None = None
+    amount: Decimal | None = None
+    description: str | None = None
+    type: str | None = None
+    transaction_date: date | None = None
+    is_recurring: bool | None = None

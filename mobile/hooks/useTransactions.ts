@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { transactionsApi } from "../services/finance";
-import type { Transaction } from "../services/finance";
+import type { Transaction, TransferPayload } from "../services/finance";
 
 export function useTransactions(params?: {
   account_id?: string;
@@ -20,6 +20,19 @@ export function useCreateTransaction() {
   return useMutation({
     mutationFn: (data: Omit<Transaction, "id" | "created_at">) =>
       transactionsApi.create(data).then((r) => r.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+    },
+  });
+}
+
+export function useTransferMoney() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: TransferPayload) =>
+      transactionsApi.transfer(data).then((r) => r.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({ queryKey: ["accounts"] });

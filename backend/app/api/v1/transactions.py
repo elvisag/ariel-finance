@@ -30,7 +30,7 @@ from app.core.database import get_db
 from app.models.account import Account
 from app.models.transaction import Transaction
 from app.models.user import User
-from app.schemas.transaction import TransactionCreate, TransactionUpdate, TransactionResponse
+from app.schemas.transaction import TransactionCreate, TransactionUpdate, TransactionResponse, TransferCreate, TransferResponse
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
 
@@ -121,6 +121,80 @@ async def create_transaction(
 
     await db.flush()
     return transaction
+
+
+@router.post("/transfer", response_model=TransferResponse, status_code=status.HTTP_201_CREATED)
+async def transfer_money(
+    payload: TransferCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Transfiere dinero entre dos cuentas del mismo usuario.
+
+    Crea dos transacciones:
+      - Una de tipo "transfer" en la cuenta origen (resta del balance)
+      - Una de tipo "income" en la cuenta destino (suma al balance)
+    """
+    if payload.from_account_id == payload.to_account_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Las cuentas origen y destino deben ser distintas",
+        )
+
+    from_result = await db.execute(
+        select(Account).where(
+            Account.id == payload.from_account_id,
+            Account.user_id == current_user.id,
+        )
+    )
+    from_account = from_result.scalar_one_or_none()
+    if not from_account:
+        raise HTTPException(status_code=404, detail="Cuenta origen no encontrada")
+
+    to_result = await db.execute(
+        select(Account).where(
+            Account.id == payload.to_account_id,
+            Account.user_id == current_user.id,
+        )
+    )
+    to_account = to_result.scalar_one_or_none()
+    if not to_account:
+        raise HTTPException(status_code=404, detail="Cuenta destino no encontrada")
+
+    if from_account.balance < payload.amount:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Saldo insuficiente en la cuenta origen",
+        )
+
+    from_tx = Transaction(
+        account_id=payload.from_account_id,
+        category_id=None,
+        amount=payload.amount,
+        description=payload.description,
+        type="transfer",
+        transaction_date=payload.transaction_date,
+        is_recurring=False,
+    )
+    db.add(from_tx)
+
+    to_tx = Transaction(
+        account_id=payload.to_account_id,
+        category_id=None,
+        amount=payload.amount,
+        description=payload.description,
+        type="income",
+        transaction_date=payload.transaction_date,
+        is_recurring=False,
+    )
+    db.add(to_tx)
+
+    from_account.balance -= payload.amount
+    to_account.balance += payload.amount
+
+    await db.flush()
+    return TransferResponse(from_transaction=from_tx, to_transaction=to_tx)
 
 
 @router.put("/{transaction_id}", response_model=TransactionResponse)

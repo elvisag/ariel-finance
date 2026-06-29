@@ -55,6 +55,19 @@ export interface Account {
   created_at: string;
 }
 
+export interface TransferPayload {
+  from_account_id: string;
+  to_account_id: string;
+  amount: number;
+  description: string | null;
+  transaction_date: string;
+}
+
+export interface TransferResponse {
+  from_transaction: Transaction;
+  to_transaction: Transaction;
+}
+
 export interface Transaction {
   id: string;
   account_id: string;
@@ -149,6 +162,9 @@ export const transactionsApi = {
 
   /** Eliminar una transacción (revierte el balance) */
   delete: (id: string) => api.delete(`/transactions/${id}`),
+
+  /** Transferir entre cuentas */
+  transfer: (data: TransferPayload) => api.post<TransferResponse>("/transactions/transfer", data),
 
   /** Actualizar una transacción */
   update: (id: string, data: Partial<Omit<Transaction, "id" | "created_at">>) =>
