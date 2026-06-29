@@ -4,6 +4,7 @@ from decimal import Decimal
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.account import Account
@@ -126,6 +127,7 @@ async def update_transaction(
 ) -> Transaction:
     query = (
         select(Transaction)
+        .options(selectinload(Transaction.account))
         .join(Account)
         .where(Transaction.id == transaction_id, Account.user_id == user.id)
     )
@@ -168,6 +170,7 @@ async def delete_transaction(
 ) -> None:
     query = (
         select(Transaction)
+        .options(selectinload(Transaction.account))
         .join(Account)
         .where(Transaction.id == transaction_id, Account.user_id == user.id)
     )
