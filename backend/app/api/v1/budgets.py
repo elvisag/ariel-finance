@@ -23,7 +23,7 @@ from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.models.budget import Budget
 from app.models.user import User
-from app.schemas.budget import BudgetCreate, BudgetResponse
+from app.schemas.budget import BudgetCreate, BudgetUpdate, BudgetResponse
 
 router = APIRouter(prefix="/budgets", tags=["budgets"])
 
@@ -81,3 +81,28 @@ async def delete_budget(
             detail="Presupuesto no encontrado",
         )
     await db.delete(budget)
+
+
+@router.put("/{budget_id}", response_model=BudgetResponse)
+async def update_budget(
+    budget_id: uuid.UUID,
+    payload: BudgetUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Budget).where(Budget.id == budget_id, Budget.user_id == current_user.id)
+    )
+    budget = result.scalar_one_or_none()
+    if not budget:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Presupuesto no encontrado",
+        )
+
+    update_data = payload.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(budget, field, value)
+
+    await db.flush()
+    return budget

@@ -171,6 +171,10 @@ export const budgetsApi = {
   create: (data: Omit<Budget, "id" | "created_at">) =>
     api.post<Budget>("/budgets/", data),
 
+  /** Actualizar un presupuesto */
+  update: (id: string, data: { amount?: number; period?: string; end_date?: string | null }) =>
+    api.put<Budget>(`/budgets/${id}`, data),
+
   /** Eliminar un presupuesto */
   delete: (id: string) => api.delete(`/budgets/${id}`),
 };

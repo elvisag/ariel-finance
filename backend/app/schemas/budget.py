@@ -13,6 +13,12 @@ class BudgetCreate(BaseModel):
     end_date: date | None = None
 
 
+class BudgetUpdate(BaseModel):
+    amount: Decimal | None = None
+    period: str | None = None
+    end_date: date | None = None
+
+
 class BudgetResponse(BaseModel):
     id: uuid.UUID
     category_id: uuid.UUID
