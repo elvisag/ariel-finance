@@ -1,5 +1,5 @@
-import { useState, useMemo, useCallback } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Modal, RefreshControl } from "react-native";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { View, Text, ScrollView, TouchableOpacity, Modal, RefreshControl, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import ScreenLayout from "../../components/ScreenLayout";
 import Card from "../../components/Card";
@@ -8,7 +8,7 @@ import Button from "../../components/Button";
 import ErrorMessage from "../../components/ErrorMessage";
 import PickerModal from "../../components/PickerModal";
 import LoadingScreen from "../../components/LoadingScreen";
-import { useBudgets, useCreateBudget, useDeleteBudget } from "../../hooks/useBudgets";
+import { useBudgets, useCreateBudget, useUpdateBudget, useDeleteBudget } from "../../hooks/useBudgets";
 import { useCategories } from "../../hooks/useCategories";
 import { useTransactions } from "../../hooks/useTransactions";
 import type { Budget, Category } from "../../services/finance";
@@ -60,6 +60,7 @@ function calcSpent(
 
 export default function BudgetsScreen() {
   const [showForm, setShowForm] = useState(false);
+  const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -69,6 +70,7 @@ export default function BudgetsScreen() {
   const { data: categories, refetch: refetchCats } = useCategories();
   const { data: monthTx, refetch: refetchTx } = useTransactions({ start_date: monthRange.start, end_date: monthRange.end });
   const createBudget = useCreateBudget();
+  const updateBudget = useUpdateBudget();
   const deleteBudget = useDeleteBudget();
 
   const handleDelete = async (id: string) => {
@@ -125,6 +127,10 @@ export default function BudgetsScreen() {
                 pct={pct}
                 overBudget={overBudget}
                 period={b.period}
+                onEdit={() => {
+                  setEditingBudget(b);
+                  setShowForm(true);
+                }}
                 onDelete={() => handleDelete(b.id)}
                 deleting={deleteId === b.id}
               />
@@ -136,13 +142,22 @@ export default function BudgetsScreen() {
 
       <BudgetForm
         open={showForm}
-        onClose={() => setShowForm(false)}
-        categories={categories || []}
-        onSubmit={async (data) => {
-          await createBudget.mutateAsync(data);
+        onClose={() => {
           setShowForm(false);
+          setEditingBudget(null);
         }}
-        loading={createBudget.isPending}
+        categories={categories || []}
+        initialBudget={editingBudget}
+        onSubmit={async (data) => {
+          if (editingBudget) {
+            await updateBudget.mutateAsync({ id: editingBudget.id, data });
+          } else {
+            await createBudget.mutateAsync(data as any);
+          }
+          setShowForm(false);
+          setEditingBudget(null);
+        }}
+        loading={createBudget.isPending || updateBudget.isPending}
       />
     </ScreenLayout>
   );
@@ -157,6 +172,7 @@ function BudgetCard({
   pct,
   overBudget,
   period,
+  onEdit,
   onDelete,
   deleting,
 }: {
@@ -168,6 +184,7 @@ function BudgetCard({
   pct: number;
   overBudget: boolean;
   period: string;
+  onEdit?: () => void;
   onDelete: () => void;
   deleting: boolean;
 }) {
@@ -187,6 +204,9 @@ function BudgetCard({
           <Text className="text-text-primary font-semibold">{categoryName}</Text>
           <Text className="text-text-muted text-xs">{periodLabel}</Text>
         </View>
+        <TouchableOpacity className="mr-3 p-1" onPress={onEdit}>
+          <Ionicons name="pencil-outline" size={18} color="#a0a0a0" />
+        </TouchableOpacity>
         <TouchableOpacity onPress={onDelete} disabled={deleting}>
           <Ionicons name={deleting ? "hourglass" : "trash-outline"} size={18} color="#ef4444" />
         </TouchableOpacity>
@@ -215,18 +235,20 @@ function BudgetForm({
   open,
   onClose,
   categories,
+  initialBudget,
   onSubmit,
   loading,
 }: {
   open: boolean;
   onClose: () => void;
   categories: Category[];
-  onSubmit: (data: Omit<import("../../services/finance").Budget, "id" | "created_at">) => Promise<void>;
+  initialBudget: Budget | null;
+  onSubmit: (data: Partial<Omit<import("../../services/finance").Budget, "id" | "created_at">>) => Promise<void>;
   loading: boolean;
 }) {
-  const [categoryId, setCategoryId] = useState("");
-  const [amount, setAmount] = useState("");
-  const [period, setPeriod] = useState("monthly");
+  const [categoryId, setCategoryId] = useState(initialBudget?.category_id ?? "");
+  const [amount, setAmount] = useState(initialBudget ? String(Number(initialBudget.amount)) : "");
+  const [period, setPeriod] = useState(initialBudget?.period ?? "monthly");
   const [error, setError] = useState("");
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [showPeriodPicker, setShowPeriodPicker] = useState(false);
@@ -234,6 +256,15 @@ function BudgetForm({
   const expenseCats = categories.filter((c) => c.type === "expense");
   const selectedCat = categories.find((c) => c.id === categoryId);
   const selectedPeriod = PERIODS.find((p) => p.id === period);
+
+  useEffect(() => {
+    if (open) {
+      setCategoryId(initialBudget?.category_id ?? "");
+      setAmount(initialBudget ? String(Number(initialBudget.amount)) : "");
+      setPeriod(initialBudget?.period ?? "monthly");
+      setError("");
+    }
+  }, [open, initialBudget]);
 
   const handleSubmit = async () => {
     try {
@@ -243,11 +274,13 @@ function BudgetForm({
       if (isNaN(parsed) || parsed <= 0) { setError("Ingresá un monto válido"); return; }
 
       await onSubmit({
-        category_id: categoryId,
+        ...(initialBudget ? {} : {
+          category_id: categoryId,
+          start_date: new Date().toISOString().split("T")[0],
+          end_date: null,
+        }),
         amount: parsed,
         period,
-        start_date: new Date().toISOString().split("T")[0],
-        end_date: null,
       });
     } catch (err: any) {
       setError(err.response?.data?.detail || "Error al crear presupuesto");
@@ -259,7 +292,7 @@ function BudgetForm({
       <TouchableOpacity className="flex-1 bg-black/60 justify-end" activeOpacity={1} onPress={onClose}>
         <TouchableOpacity activeOpacity={1} className="bg-bg-surface rounded-t-3xl" onPress={() => {}}>
           <View className="flex-row items-center justify-between px-6 pt-6 pb-4 border-b border-border">
-            <Text className="text-text-primary text-lg font-bold">Nuevo presupuesto</Text>
+            <Text className="text-text-primary text-lg font-bold">{initialBudget ? "Editar presupuesto" : "Nuevo presupuesto"}</Text>
             <TouchableOpacity onPress={onClose}>
               <Ionicons name="close" size={24} color="#a0a0a0" />
             </TouchableOpacity>
@@ -299,7 +332,7 @@ function BudgetForm({
             </TouchableOpacity>
 
             <ErrorMessage message={error} className="mb-4" />
-            <Button title="Crear presupuesto" onPress={handleSubmit} loading={loading} size="lg" />
+            <Button title={initialBudget ? "Guardar cambios" : "Crear presupuesto"} onPress={handleSubmit} loading={loading} size="lg" />
           </ScrollView>
         </TouchableOpacity>
       </TouchableOpacity>

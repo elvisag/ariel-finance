@@ -18,6 +18,15 @@ export function useCreateBudget() {
   });
 }
 
+export function useUpdateBudget() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Omit<Budget, "id" | "created_at">> }) =>
+      budgetsApi.update(id, data).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["budgets"] }),
+  });
+}
+
 export function useDeleteBudget() {
   const qc = useQueryClient();
   return useMutation({
