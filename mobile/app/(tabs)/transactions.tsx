@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
 import { View, Text, FlatList, TouchableOpacity, Alert } from "react-native";
+import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import ScreenLayout from "../../components/ScreenLayout";
 import Card from "../../components/Card";
@@ -40,6 +41,7 @@ function groupByDate(txs: Transaction[]) {
 }
 
 export default function TransactionsScreen() {
+  const router = useRouter();
   const [filterType, setFilterType] = useState<FilterType>("all");
   const [filterAccountId, setFilterAccountId] = useState<string | undefined>();
   const [showAccountPicker, setShowAccountPicker] = useState(false);
@@ -64,10 +66,29 @@ export default function TransactionsScreen() {
     return map;
   }, [accounts]);
 
-  const handleDelete = useCallback((tx: Transaction) => {
+  const handlePress = useCallback((tx: Transaction) => {
+    Alert.alert(
+      tx.description || "Movimiento",
+      `${formatCurrency(tx.amount)} · ${new Date(tx.transaction_date).toLocaleDateString("es-AR")}`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Editar",
+          onPress: () => router.push({ pathname: "/(tabs)/add", params: { edit: JSON.stringify(tx) } }),
+        },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: () => confirmDelete(tx),
+        },
+      ],
+    );
+  }, [router]);
+
+  const confirmDelete = useCallback((tx: Transaction) => {
     Alert.alert(
       "Eliminar movimiento",
-      `¿Eliminar "${tx.description || "Sin descripción"}" por ${formatCurrency(tx.amount)}?`,
+      `¿Estás seguro? Esta acción no se puede deshacer.`,
       [
         { text: "Cancelar", style: "cancel" },
         {
@@ -177,7 +198,7 @@ export default function TransactionsScreen() {
                   tx={tx}
                   showAccount
                   accountName={accountMap[tx.account_id]?.name}
-                  onPress={() => handleDelete(tx)}
+                  onPress={() => handlePress(tx)}
                 />
               ))}
             </View>

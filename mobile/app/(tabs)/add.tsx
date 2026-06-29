@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import ScreenLayout from "../../components/ScreenLayout";
 import Card from "../../components/Card";
@@ -10,24 +10,32 @@ import ErrorMessage from "../../components/ErrorMessage";
 import PickerModal from "../../components/PickerModal";
 import { useAccounts } from "../../hooks/useAccounts";
 import { useCategories } from "../../hooks/useCategories";
-import { useCreateTransaction } from "../../hooks/useTransactions";
+import { useCreateTransaction, useUpdateTransaction } from "../../hooks/useTransactions";
+import type { Transaction } from "../../services/finance";
 
 type TransactionType = "income" | "expense" | "transfer";
 
 export default function AddScreen() {
-  const [type, setType] = useState<TransactionType>("expense");
-  const [amount, setAmount] = useState("");
-  const [description, setDescription] = useState("");
-  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const params = useLocalSearchParams<{ edit?: string }>();
+  const router = useRouter();
+  const editData: Transaction | null = params.edit ? JSON.parse(params.edit) : null;
+  const isEditing = !!editData;
+
+  const [type, setType] = useState<TransactionType>(editData?.type || "expense");
+  const [amount, setAmount] = useState(editData ? String(editData.amount) : "");
+  const [description, setDescription] = useState(editData?.description || "");
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(editData?.account_id || null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(editData?.category_id || null);
   const [showAccountPicker, setShowAccountPicker] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [error, setError] = useState("");
-  const router = useRouter();
 
   const { data: accounts, isLoading: loadingAccounts } = useAccounts();
   const { data: categories, isLoading: loadingCategories } = useCategories();
   const createTransaction = useCreateTransaction();
+  const updateTransaction = useUpdateTransaction();
+
+  const isPending = createTransaction.isPending || updateTransaction.isPending;
 
   const filteredCategories = (categories || []).filter((c) => c.type === type);
 
@@ -49,15 +57,21 @@ export default function AddScreen() {
         return;
       }
 
-      await createTransaction.mutateAsync({
+      const payload = {
         account_id: selectedAccountId,
         category_id: selectedCategoryId,
         amount: parsedAmount,
         description: description || null,
         type,
-        transaction_date: new Date().toISOString().split("T")[0],
-        is_recurring: false,
-      });
+        transaction_date: editData?.transaction_date || new Date().toISOString().split("T")[0],
+        is_recurring: editData?.is_recurring || false,
+      };
+
+      if (isEditing && editData) {
+        await updateTransaction.mutateAsync({ id: editData.id, data: payload });
+      } else {
+        await createTransaction.mutateAsync(payload);
+      }
 
       router.back();
     } catch (err: any) {
@@ -86,7 +100,9 @@ export default function AddScreen() {
           <TouchableOpacity onPress={() => router.back()} className="mr-4">
             <Ionicons name="close" size={24} color="#f8f8f8" />
           </TouchableOpacity>
-          <Text className="text-text-primary text-2xl font-bold">Añadir movimiento</Text>
+          <Text className="text-text-primary text-2xl font-bold">
+            {isEditing ? "Editar movimiento" : "Añadir movimiento"}
+          </Text>
         </View>
 
         <View className="flex-row mx-6 mb-6 bg-bg-surface rounded-xl p-1">
@@ -157,10 +173,10 @@ export default function AddScreen() {
         <View className="px-6 mb-8">
           <ErrorMessage message={error} className="mb-4" />
           <Button
-            title="Guardar"
+            title={isEditing ? "Guardar cambios" : "Guardar"}
             onPress={handleSubmit}
             size="lg"
-            loading={createTransaction.isPending}
+            loading={isPending}
           />
         </View>
       </ScrollView>

@@ -27,6 +27,19 @@ export function useCreateTransaction() {
   });
 }
 
+export function useUpdateTransaction() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Omit<Transaction, "id" | "created_at">> }) =>
+      transactionsApi.update(id, data).then((r) => r.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+    },
+  });
+}
+
 export function useDeleteTransaction() {
   const queryClient = useQueryClient();
 

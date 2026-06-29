@@ -15,6 +15,16 @@ class TransactionCreate(BaseModel):
     is_recurring: bool = False
 
 
+class TransactionUpdate(BaseModel):
+    account_id: uuid.UUID | None = None
+    category_id: uuid.UUID | None = None
+    amount: Decimal | None = None
+    description: str | None = None
+    type: str | None = None
+    transaction_date: date | None = None
+    is_recurring: bool | None = None
+
+
 class TransactionResponse(BaseModel):
     id: uuid.UUID
     account_id: uuid.UUID

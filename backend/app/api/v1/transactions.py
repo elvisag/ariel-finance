@@ -19,6 +19,7 @@ Seguridad: Siempre se verifica que la cuenta pertenezca al usuario.
 
 import uuid
 from datetime import date
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy import select
@@ -29,7 +30,7 @@ from app.core.database import get_db
 from app.models.account import Account
 from app.models.transaction import Transaction
 from app.models.user import User
-from app.schemas.transaction import TransactionCreate, TransactionResponse
+from app.schemas.transaction import TransactionCreate, TransactionUpdate, TransactionResponse
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
 
@@ -117,6 +118,59 @@ async def create_transaction(
     elif payload.type == "income":
         account.balance += payload.amount
     # type == "transfer": no afecta el balance global, se maneja aparte
+
+    await db.flush()
+    return transaction
+
+
+@router.put("/{transaction_id}", response_model=TransactionResponse)
+async def update_transaction(
+    transaction_id: uuid.UUID,
+    payload: TransactionUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Actualiza una transacción y ajusta el balance si cambió el monto o tipo.
+
+    Cuando se modifica amount o type, se recalcula el efecto en el balance:
+      efecto_anterior - efecto_nuevo = ajuste en el balance
+    """
+    query = (
+        select(Transaction)
+        .join(Account)
+        .where(Transaction.id == transaction_id, Account.user_id == current_user.id)
+    )
+    result = await db.execute(query)
+    transaction = result.scalar_one_or_none()
+    if not transaction:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Transacción no encontrada",
+        )
+
+    old_amount = transaction.amount
+    old_type = transaction.type
+
+    update_data = payload.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(transaction, key, value)
+
+    new_amount = update_data.get("amount", old_amount)
+    new_type = update_data.get("type", old_type)
+
+    def balance_effect(amt: Decimal, t: str) -> Decimal:
+        if t == "expense":
+            return -amt
+        elif t == "income":
+            return amt
+        return Decimal("0.00")
+
+    if "amount" in update_data or "type" in update_data:
+        old_effect = balance_effect(old_amount, old_type)
+        new_effect = balance_effect(new_amount, new_type)
+        account = transaction.account
+        account.balance += new_effect - old_effect
 
     await db.flush()
     return transaction
