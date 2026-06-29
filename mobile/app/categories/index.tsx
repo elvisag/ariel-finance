@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity } from "react-native";
+import { useState, useCallback } from "react";
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import ScreenLayout from "../../components/ScreenLayout";
@@ -15,15 +15,22 @@ const typeLabels: Record<string, string> = {
 
 export default function CategoriesScreen() {
   const router = useRouter();
-  const { data: categories, isLoading } = useCategories();
+  const { data: categories, isLoading, refetch } = useCategories();
   const deleteCategory = useDeleteCategory();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const handleDelete = async (id: string) => {
     setDeletingId(id);
     await deleteCategory.mutateAsync(id);
     setDeletingId(null);
   };
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  }, [refetch]);
 
   if (isLoading) return <LoadingScreen />;
 
@@ -47,7 +54,10 @@ export default function CategoriesScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView className="flex-1 px-6">
+      <ScrollView
+        className="flex-1 px-6"
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#c0c0f8" />}
+      >
         {userCategories.length > 0 && (
           <>
             <Text className="text-text-secondary text-sm font-semibold uppercase mb-2 ml-1">Tus categorías</Text>

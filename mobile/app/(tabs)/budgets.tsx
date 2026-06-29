@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Modal } from "react-native";
+import { useState, useMemo, useCallback } from "react";
+import { View, Text, ScrollView, TouchableOpacity, Modal, RefreshControl } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import ScreenLayout from "../../components/ScreenLayout";
 import Card from "../../components/Card";
@@ -61,12 +61,13 @@ function calcSpent(
 export default function BudgetsScreen() {
   const [showForm, setShowForm] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const monthRange = useMemo(() => getMonthRange(), []);
 
-  const { data: budgets, isLoading: loadingBudgets } = useBudgets();
-  const { data: categories } = useCategories();
-  const { data: monthTx } = useTransactions({ start_date: monthRange.start, end_date: monthRange.end });
+  const { data: budgets, isLoading: loadingBudgets, refetch: refetchBudgets } = useBudgets();
+  const { data: categories, refetch: refetchCats } = useCategories();
+  const { data: monthTx, refetch: refetchTx } = useTransactions({ start_date: monthRange.start, end_date: monthRange.end });
   const createBudget = useCreateBudget();
   const deleteBudget = useDeleteBudget();
 
@@ -75,6 +76,12 @@ export default function BudgetsScreen() {
     await deleteBudget.mutateAsync(id);
     setDeleteId(null);
   };
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([refetchBudgets(), refetchCats(), refetchTx()]);
+    setRefreshing(false);
+  }, [refetchBudgets, refetchCats, refetchTx]);
 
   if (loadingBudgets) return <LoadingScreen />;
 
@@ -90,7 +97,10 @@ export default function BudgetsScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView className="flex-1 px-6">
+      <ScrollView
+        className="flex-1 px-6"
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#c0c0f8" />}
+      >
         {!budgets || budgets.length === 0 ? (
           <Card className="p-8 items-center mt-4">
             <Ionicons name="wallet-outline" size={48} color="#707070" />

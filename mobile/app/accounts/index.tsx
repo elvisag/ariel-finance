@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity } from "react-native";
+import { useState, useCallback } from "react";
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import ScreenLayout from "../../components/ScreenLayout";
@@ -30,15 +30,22 @@ function formatCurrency(n: number) {
 
 export default function AccountsScreen() {
   const router = useRouter();
-  const { data: accounts, isLoading } = useAccounts();
+  const { data: accounts, isLoading, refetch } = useAccounts();
   const deleteAccount = useDeleteAccount();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const handleDelete = async (id: string) => {
     setDeletingId(id);
     await deleteAccount.mutateAsync(id);
     setDeletingId(null);
   };
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  }, [refetch]);
 
   if (isLoading) return <LoadingScreen />;
 
@@ -59,7 +66,10 @@ export default function AccountsScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView className="flex-1 px-6">
+      <ScrollView
+        className="flex-1 px-6"
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#c0c0f8" />}
+      >
         {!accounts || accounts.length === 0 ? (
           <Card className="p-8 items-center mt-8">
             <Ionicons name="wallet-outline" size={48} color="#707070" />

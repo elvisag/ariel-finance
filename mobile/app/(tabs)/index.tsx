@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { View, Text, ScrollView, TouchableOpacity } from "react-native";
+import { useMemo, useCallback, useState } from "react";
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuthStore } from "../../store/auth";
@@ -25,13 +25,14 @@ export default function HomeScreen() {
   const user = useAuthStore((s) => s.user);
   const router = useRouter();
   const monthRange = useMemo(() => getMonthRange(), []);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const { data: accounts, isLoading: loadingAccounts } = useAccounts();
-  const { data: monthTx, isLoading: loadingMonth } = useTransactions({
+  const { data: accounts, isLoading: loadingAccounts, refetch: refetchAccounts } = useAccounts();
+  const { data: monthTx, isLoading: loadingMonth, refetch: refetchMonth } = useTransactions({
     start_date: monthRange.start,
     end_date: monthRange.end,
   });
-  const { data: recentTx, isLoading: loadingRecent } = useTransactions();
+  const { data: recentTx, isLoading: loadingRecent, refetch: refetchRecent } = useTransactions();
 
   const totalBalance = useMemo(
     () => (accounts || []).reduce((sum, a) => sum + a.balance, 0),
@@ -52,13 +53,22 @@ export default function HomeScreen() {
 
   const isLoading = loadingAccounts && loadingMonth && loadingRecent;
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([refetchAccounts(), refetchMonth(), refetchRecent()]);
+    setRefreshing(false);
+  }, [refetchAccounts, refetchMonth, refetchRecent]);
+
   if (isLoading) {
     return <LoadingScreen />;
   }
 
   return (
     <ScreenLayout>
-      <ScrollView className="flex-1">
+      <ScrollView
+        className="flex-1"
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#c0c0f8" />}
+      >
         <View className="px-6 pt-16 pb-8">
           <Text className="text-text-secondary text-lg">Hola,</Text>
           <Text className="text-text-primary text-3xl font-bold">{user?.name || "Usuario"}</Text>

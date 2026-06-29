@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Dimensions } from "react-native";
+import { useMemo, useState, useCallback } from "react";
+import { View, Text, ScrollView, TouchableOpacity, Dimensions, RefreshControl } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import ScreenLayout from "../components/ScreenLayout";
@@ -94,10 +94,11 @@ export default function ReportsScreen() {
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
   const [selectedYear] = useState(now.getFullYear());
   const monthRange = useMemo(() => getMonthRange(), []);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const { data: summary, isLoading: loadingSummary } = useMonthlySummary(selectedYear, selectedMonth);
-  const { data: trend, isLoading: loadingTrend } = useMonthlyTrend(6);
-  const { data: spending, isLoading: loadingSpending } = useSpendingByCategory(monthRange.start, monthRange.end);
+  const { data: summary, isLoading: loadingSummary, refetch: refetchSummary } = useMonthlySummary(selectedYear, selectedMonth);
+  const { data: trend, isLoading: loadingTrend, refetch: refetchTrend } = useMonthlyTrend(6);
+  const { data: spending, isLoading: loadingSpending, refetch: refetchSpending } = useSpendingByCategory(monthRange.start, monthRange.end);
 
   const isLoading = loadingSummary || loadingTrend || loadingSpending;
 
@@ -121,11 +122,20 @@ export default function ReportsScreen() {
     }));
   }, [spending]);
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([refetchSummary(), refetchTrend(), refetchSpending()]);
+    setRefreshing(false);
+  }, [refetchSummary, refetchTrend, refetchSpending]);
+
   if (isLoading) return <LoadingScreen message="Cargando reportes..." />;
 
   return (
     <ScreenLayout>
-      <ScrollView className="flex-1">
+      <ScrollView
+        className="flex-1"
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#c0c0f8" />}
+      >
         <View className="px-6 pt-16 pb-4 flex-row items-center">
           <TouchableOpacity onPress={() => router.back()} className="mr-4">
             <Ionicons name="arrow-back" size={24} color="#f8f8f8" />
