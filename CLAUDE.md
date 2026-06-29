@@ -6,7 +6,9 @@ Monorepo con dos proyectos independientes: `backend/` (FastAPI) y `mobile/` (Exp
 
 - **Frontend**: Expo Router (file-based routing) + NativeWind (Tailwind) + Zustand + React Query
 - **Backend**: FastAPI async + SQLAlchemy 2.0 async + Pydantic v2
-- **Autenticación**: JWT (Bearer token) almacenado en SecureStore
+- **Autenticación**: JWT (Bearer token) almacenado en SecureStore, Google OAuth con expo-auth-session
+- **Auth guard**: Root layout llama `checkAuth()` al montar, entry point redirige según estado
+- **Google OAuth flow**: `useGoogleAuth` hook → `expo-auth-session` → id_token → POST `/auth/google` → JWT propio
 - **Base de datos**: PostgreSQL en producción, SQLite para desarrollo local
 
 ## Comandos
@@ -55,6 +57,10 @@ docker compose up -d           # PostgreSQL + Redis + Backend
 - **Ruteo**: Expo Router (file-based) — las pantallas van en `app/`
 - **API**: Axios con interceptors para token JWT, todo tipado en `services/finance.ts`
 - **Componentes**: Preferir componentes funcionales, mantenerlos pequeños
+- **Auth guard**: Entry point (`app/index.tsx`) maneja loading spinner y redirección según `isAuthenticated`
+- **Auto-redirect**: Pantallas auth redirigen a `(tabs)` via `useEffect` que escucha `isAuthenticated`
+- **Google OAuth**: Hook `useGoogleAuth` encapsula `expo-auth-session`, se reusa en login y register
+- **Tests**: Jest con mocks de SecureStore, expo-web-browser, expo-auth-session, y Zustand
 
 ## Decisiones de arquitectura
 
@@ -73,6 +79,8 @@ docker compose up -d           # PostgreSQL + Redis + Backend
 - **NO** crear migraciones manuales — usar Alembic `alembic revision --autogenerate`
 - **NO** mezclar estilos inline con NativeWind — elegir uno y mantener consistencia
 - **NO** commits directos a `main` sin PR (cuando haya colaboradores)
+- **NO** olvidar redirigir después de Google OAuth — el hook guarda el token y llama `checkAuth()`, la redirección la maneja el `useEffect` en la pantalla
+- **NO** renderizar el Stack de Expo Router condicionalmente — el loading se maneja en `app/index.tsx` (no en el layout)
 
 ## Convenciones de git
 
@@ -90,3 +98,6 @@ docker compose up -d           # PostgreSQL + Redis + Backend
 - [ ] ¿El estilo sigue NativeWind consistente?
 - [ ] ¿La API retorna los códigos HTTP correctos?
 - [ ] ¿Los schemas Pydantic validan correctamente?
+- [ ] ¿El auth guard redirige correctamente según `isAuthenticated`?
+- [ ] ¿Google OAuth funciona en ambos login y register?
+- [ ] ¿`checkAuth()` se llama en el layout raíz al montar?

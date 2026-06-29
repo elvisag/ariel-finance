@@ -9,8 +9,9 @@ Aplicación móvil de finanzas personales multi-usuario. Permite gestionar ingre
 | **Frontend** | Expo (React Native) + TypeScript + NativeWind |
 | **Backend** | FastAPI (Python 3.12) + SQLAlchemy async |
 | **Base de datos** | PostgreSQL (producción) / SQLite (desarrollo) |
-| **Autenticación** | JWT (python-jose + bcrypt) |
+| **Autenticación** | JWT (python-jose + bcrypt) + Google OAuth (expo-auth-session) |
 | **Cache** | Redis |
+| **Testing** | Jest (frontend) + pytest (backend) |
 | **Infraestructura** | Docker Compose |
 
 ## Estructura del proyecto
@@ -28,11 +29,14 @@ ariel-finance/
 │   └── tests/
 ├── mobile/                  # App móvil (Expo Router)
 │   ├── app/                 # Pantallas (file-based routing)
-│   │   ├── auth/            # Login / Registro
+│   │   ├── auth/            # Login / Registro (email + Google OAuth)
 │   │   └── (tabs)/          # Inicio, Movimientos, Añadir, Presupuestos, Perfil
 │   ├── components/          # UI reutilizable
+│   ├── hooks/               # Hooks personalizados (useGoogleAuth)
 │   ├── services/            # Cliente API (Axios + SecureStore)
-│   └── store/               # Estado global (Zustand)
+│   ├── store/               # Estado global (Zustand)
+│   ├── __mocks__/           # Mocks para tests
+│   └── tests/               # Tests unitarios
 ├── docker-compose.yml
 └── .gitignore
 ```
@@ -80,8 +84,9 @@ Escanea el código QR con Expo Go en tu celular (misma red WiFi).
 
 | Método | Ruta | Descripción |
 |--------|------|-------------|
-| POST | `/api/v1/auth/register` | Registrar usuario |
-| POST | `/api/v1/auth/login` | Iniciar sesión |
+| POST | `/api/v1/auth/register` | Registrar usuario (email + contraseña) |
+| POST | `/api/v1/auth/login` | Iniciar sesión (email + contraseña) |
+| POST | `/api/v1/auth/google` | Iniciar sesión o registrarse con Google OAuth |
 | GET | `/api/v1/users/me` | Perfil del usuario |
 | GET | `/api/v1/accounts/` | Listar cuentas |
 | POST | `/api/v1/accounts/` | Crear cuenta |
@@ -97,7 +102,7 @@ Escanea el código QR con Expo Go en tu celular (misma red WiFi).
 
 Modelos principales:
 
-- **User** — id, email, name, password_hash
+- **User** — id, email, name, password_hash (nullable si usa Google), google_id (nullable si usa email)
 - **Account** — user_id, name, type (checking/savings/credit), balance, currency
 - **Transaction** — account_id, category_id, amount, type (income/expense), description, date
 - **Category** — user_id, name, icon, color, type (income/expense)
