@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     # En producción cambia a: postgresql+asyncpg://user:pass@host/db
     DATABASE_URL: str = "sqlite+aiosqlite:///./ariel_finance.db"
 
+    # ── Google OAuth ───────────────────────────────────────────
+    GOOGLE_CLIENT_ID: str = ""
+
     # ── Redis (caching / sesiones) ─────────────────────────────
     REDIS_URL: str = ""
 

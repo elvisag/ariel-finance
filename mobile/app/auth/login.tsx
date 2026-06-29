@@ -12,7 +12,7 @@
  *   3. Si error → muestra mensaje en rojo
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -33,6 +33,13 @@ export default function LoginScreen() {
   const [error, setError] = useState("");
   const router = useRouter();
   const login = useAuthStore((s) => s.login);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace("/(tabs)");
+    }
+  }, [isAuthenticated]);
 
   const {
     signInWithGoogle,

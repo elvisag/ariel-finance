@@ -18,6 +18,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import hash_password, verify_password, create_access_token
 from app.models.user import User
@@ -108,10 +109,7 @@ async def google_auth(payload: GoogleAuthRequest, db: AsyncSession = Depends(get
         info = id_token.verify_oauth2_token(
             payload.id_token,
             requests.Request(),
-            # AUDIENCE: opcional. Si quieres restringir a un solo
-            # Google Client ID, pásalo aquí. Si dejas None,
-            # cualquier token de Google válido será aceptado.
-            audience=None,
+            audience=settings.GOOGLE_CLIENT_ID or None,
         )
     except ValueError as e:
         raise HTTPException(

@@ -11,7 +11,7 @@
  * siempre con Google, nunca con email/contraseña.
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -33,6 +33,13 @@ export default function RegisterScreen() {
   const [error, setError] = useState("");
   const router = useRouter();
   const register = useAuthStore((s) => s.register);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace("/(tabs)");
+    }
+  }, [isAuthenticated]);
 
   const {
     signInWithGoogle,
