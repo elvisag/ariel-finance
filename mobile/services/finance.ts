@@ -149,6 +149,10 @@ export const transactionsApi = {
 
   /** Eliminar una transacción (revierte el balance) */
   delete: (id: string) => api.delete(`/transactions/${id}`),
+
+  /** Actualizar una transacción */
+  update: (id: string, data: Partial<Omit<Transaction, "id" | "created_at">>) =>
+    api.put<Transaction>(`/transactions/${id}`, data),
 };
 
 export const categoriesApi = {

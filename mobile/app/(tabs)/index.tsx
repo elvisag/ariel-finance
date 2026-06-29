@@ -6,9 +6,9 @@ import { useAuthStore } from "../../store/auth";
 import ScreenLayout from "../../components/ScreenLayout";
 import Card from "../../components/Card";
 import LoadingScreen from "../../components/LoadingScreen";
+import TransactionRow from "../../components/TransactionRow";
 import { useAccounts } from "../../hooks/useAccounts";
 import { useTransactions } from "../../hooks/useTransactions";
-import type { Transaction } from "../../services/finance";
 
 function formatCurrency(n: number) {
   return `$${Math.abs(n).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -125,25 +125,4 @@ export default function HomeScreen() {
   );
 }
 
-function TransactionRow({ tx }: { tx: Transaction }) {
-  const isIncome = tx.type === "income";
-  const isExpense = tx.type === "expense";
-  const color = isIncome ? "#10b981" : isExpense ? "#ef4444" : "#c0c0f8";
-  const icon = isIncome ? "trending-up" : isExpense ? "trending-down" : "swap-horizontal";
-  const sign = isIncome ? "+" : isExpense ? "-" : "~";
 
-  return (
-    <Card className="flex-row items-center mb-2 p-4">
-      <View className="w-10 h-10 rounded-full items-center justify-center mr-3" style={{ backgroundColor: `${color}20` }}>
-        <Ionicons name={icon} size={20} color={color} />
-      </View>
-      <View className="flex-1">
-        <Text className="text-text-primary font-medium">{tx.description || "Sin descripción"}</Text>
-        <Text className="text-text-muted text-sm">{new Date(tx.transaction_date).toLocaleDateString("es-AR")}</Text>
-      </View>
-      <Text className="font-bold" style={{ color }}>
-        {sign}{formatCurrency(tx.amount)}
-      </Text>
-    </Card>
-  );
-}
