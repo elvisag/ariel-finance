@@ -30,6 +30,9 @@ export default function AddScreen() {
   const [showToAccountPicker, setShowToAccountPicker] = useState(false);
   const [toAccountId, setToAccountId] = useState<string | null>(null);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [recurring, setRecurring] = useState(editData?.is_recurring || false);
+  const [recurrenceFrequency, setRecurrenceFrequency] = useState(editData?.recurrence_frequency || "monthly");
+  const [showFrequencyPicker, setShowFrequencyPicker] = useState(false);
   const [error, setError] = useState("");
 
   const { data: accounts, isLoading: loadingAccounts } = useAccounts();
@@ -92,7 +95,9 @@ export default function AddScreen() {
           description: description || null,
           type,
           transaction_date: editData?.transaction_date || today,
-          is_recurring: editData?.is_recurring || false,
+          is_recurring: recurring,
+          recurrence_frequency: recurring ? recurrenceFrequency : null,
+          recurrence_end_date: null,
         };
         if (isEditing && editData) {
           await updateTransaction.mutateAsync({ id: editData.id, data: payload });
@@ -223,6 +228,41 @@ export default function AddScreen() {
           )}
         </Card>
 
+        {type !== "transfer" && (
+          <Card className="mx-6 mb-6">
+            <TouchableOpacity
+              className="flex-row items-center justify-between"
+              onPress={() => setRecurring(!recurring)}
+            >
+              <View className="flex-row items-center">
+                <Ionicons name="repeat" size={20} color="#c0c0f8" />
+                <Text className="text-text-primary ml-3 font-medium">Repetir</Text>
+              </View>
+              <View className={`w-12 h-7 rounded-full ${recurring ? "bg-primary-300" : "bg-bg"} items-center justify-center border border-border`}>
+                <View className={`w-5 h-5 rounded-full ${recurring ? "bg-bg ml-5" : "bg-text-muted mr-5"}`} />
+              </View>
+            </TouchableOpacity>
+
+            {recurring && (
+              <TouchableOpacity
+                className="bg-bg rounded-xl p-4 flex-row items-center justify-between mt-4 border border-border"
+                onPress={() => setShowFrequencyPicker(true)}
+              >
+                <View className="flex-row items-center">
+                  <Ionicons name="calendar-outline" size={20} color="#a0a0a0" />
+                  <Text className="text-text-primary ml-3">
+                    {recurrenceFrequency === "daily" ? "Cada día"
+                      : recurrenceFrequency === "weekly" ? "Cada semana"
+                        : recurrenceFrequency === "monthly" ? "Cada mes"
+                          : "Cada año"}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#707070" />
+              </TouchableOpacity>
+            )}
+          </Card>
+        )}
+
         <View className="px-6 mb-8">
           <ErrorMessage message={error} className="mb-4" />
           <Button
@@ -262,6 +302,20 @@ export default function AddScreen() {
           onSelect={setSelectedCategoryId}
         />
       )}
+
+      <PickerModal
+        open={showFrequencyPicker}
+        onClose={() => setShowFrequencyPicker(false)}
+        title="Frecuencia"
+        options={[
+          { id: "daily", label: "Cada día" },
+          { id: "weekly", label: "Cada semana" },
+          { id: "monthly", label: "Cada mes" },
+          { id: "yearly", label: "Cada año" },
+        ]}
+        selectedId={recurrenceFrequency}
+        onSelect={setRecurrenceFrequency}
+      />
     </ScreenLayout>
   );
 }

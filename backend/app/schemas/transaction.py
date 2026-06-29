@@ -13,6 +13,8 @@ class TransactionCreate(BaseModel):
     type: str
     transaction_date: date
     is_recurring: bool = False
+    recurrence_frequency: str | None = None
+    recurrence_end_date: date | None = None
 
 
 class TransactionResponse(BaseModel):
@@ -24,6 +26,9 @@ class TransactionResponse(BaseModel):
     type: str
     transaction_date: date
     is_recurring: bool
+    recurrence_frequency: str | None
+    recurrence_end_date: date | None
+    recurrence_last_date: date | None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -50,3 +55,5 @@ class TransactionUpdate(BaseModel):
     type: str | None = None
     transaction_date: date | None = None
     is_recurring: bool | None = None
+    recurrence_frequency: str | None = None
+    recurrence_end_date: date | None = None

@@ -77,6 +77,9 @@ export interface Transaction {
   type: "income" | "expense" | "transfer";
   transaction_date: string;
   is_recurring: boolean;
+  recurrence_frequency: string | null;
+  recurrence_end_date: string | null;
+  recurrence_last_date: string | null;
   created_at: string;
 }
 
@@ -157,7 +160,7 @@ export const transactionsApi = {
   }) => api.get<Transaction[]>("/transactions/", { params }),
 
   /** Crear una nueva transacción */
-  create: (data: Omit<Transaction, "id" | "created_at">) =>
+  create: (data: Omit<Transaction, "id" | "created_at" | "recurrence_last_date">) =>
     api.post<Transaction>("/transactions/", data),
 
   /** Eliminar una transacción (revierte el balance) */
@@ -167,7 +170,7 @@ export const transactionsApi = {
   transfer: (data: TransferPayload) => api.post<TransferResponse>("/transactions/transfer", data),
 
   /** Actualizar una transacción */
-  update: (id: string, data: Partial<Omit<Transaction, "id" | "created_at">>) =>
+  update: (id: string, data: Partial<Omit<Transaction, "id" | "created_at" | "recurrence_last_date">>) =>
     api.put<Transaction>(`/transactions/${id}`, data),
 };
 

@@ -31,7 +31,12 @@ export default function TransactionRow({ tx, onPress, showAccount, accountName }
           <Ionicons name={icon as any} size={20} color={color} />
         </View>
         <View className="flex-1">
-          <Text className="text-text-primary font-medium">{tx.description || "Sin descripción"}</Text>
+          <View className="flex-row items-center gap-1.5">
+            <Text className="text-text-primary font-medium">{tx.description || "Sin descripción"}</Text>
+            {tx.is_recurring && (
+              <Ionicons name="repeat" size={12} color="#c0c0f8" />
+            )}
+          </View>
           <View className="flex-row items-center gap-2">
             <Text className="text-text-muted text-sm">{new Date(tx.transaction_date).toLocaleDateString("es-AR")}</Text>
             {showAccount && accountName && (

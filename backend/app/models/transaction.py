@@ -75,6 +75,22 @@ class Transaction(Base):
         default=False,
         # True si es un gasto recurrente (suscripción, alquiler, etc.)
     )
+    recurrence_frequency: Mapped[str | None] = mapped_column(
+        String(20),
+        nullable=True,
+        # "daily", "weekly", "monthly", "yearly" — NULL si no es recurrente
+    )
+    recurrence_end_date: Mapped[date | None] = mapped_column(
+        Date,
+        nullable=True,
+        # Fecha tope para la recurrencia. NULL = indefinido.
+    )
+    recurrence_last_date: Mapped[date | None] = mapped_column(
+        Date,
+        nullable=True,
+        # Última fecha en que se generó una ocurrencia automática.
+        # NULL = no se ha generado ninguna aún (primera vez).
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

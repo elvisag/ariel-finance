@@ -18,6 +18,7 @@ Flujo de una petición típica:
   Request → CORS middleware → Router → Dependencias (auth, DB) → Endpoint → Response
 """
 
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -26,6 +27,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1 import auth, users, accounts, categories, transactions, budgets
 from app.core.config import settings
 from app.core.database import engine, Base
+from app.core.scheduler import start_scheduler
 
 
 @asynccontextmanager
@@ -34,17 +36,24 @@ async def lifespan(app: FastAPI):
     Maneja el ciclo de vida de la aplicación.
 
     startup:
-      Crea todas las tablas definidas en models/ si no existen.
-      En producción se recomienda usar Alembic en lugar de create_all().
+      - Crea todas las tablas definidas en models/ si no existen.
+      - Inicia el scheduler de transacciones recurrentes.
 
     shutdown:
-      Cierra el engine de SQLAlchemy (libera conexiones).
+      - Cancela el scheduler.
+      - Cierra el engine de SQLAlchemy.
     """
     # ── Startup ──
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    scheduler_task = start_scheduler()
     yield
     # ── Shutdown ──
+    scheduler_task.cancel()
+    try:
+        await scheduler_task
+    except asyncio.CancelledError:
+        pass
     await engine.dispose()
 
 

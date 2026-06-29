@@ -18,7 +18,7 @@ export function useCreateTransaction() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: Omit<Transaction, "id" | "created_at">) =>
+    mutationFn: (data: Omit<Transaction, "id" | "created_at" | "recurrence_last_date">) =>
       transactionsApi.create(data).then((r) => r.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
@@ -44,7 +44,7 @@ export function useUpdateTransaction() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Omit<Transaction, "id" | "created_at">> }) =>
+    mutationFn: ({ id, data }: { id: string; data: Partial<Omit<Transaction, "id" | "created_at" | "recurrence_last_date">> }) =>
       transactionsApi.update(id, data).then((r) => r.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });

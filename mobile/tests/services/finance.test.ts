@@ -87,6 +87,8 @@ describe("finance.ts — API services", () => {
         type: "expense" as const,
         transaction_date: "2024-01-01",
         is_recurring: false,
+        recurrence_frequency: null,
+        recurrence_end_date: null,
       };
       transactionsApi.create(data);
       expect(api.post).toHaveBeenCalledWith("/transactions/", data);
