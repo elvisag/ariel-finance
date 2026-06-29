@@ -5,6 +5,7 @@ import { useAuthStore } from "../../store/auth";
 import ScreenLayout from "../../components/ScreenLayout";
 import Card from "../../components/Card";
 import Button from "../../components/Button";
+import ThemeToggle from "../../components/ThemeToggle";
 
 export default function ProfileScreen() {
   const { user, logout } = useAuthStore();
@@ -28,6 +29,11 @@ export default function ProfileScreen() {
           </View>
           <Text className="text-text-primary text-xl font-bold mt-4">{user?.name}</Text>
           <Text className="text-text-secondary">{user?.email}</Text>
+        </View>
+
+        <View className="mx-6 mb-6">
+          <Text className="text-text-secondary text-sm font-semibold uppercase mb-3 ml-1">Apariencia</Text>
+          <ThemeToggle />
         </View>
 
         <Card className="mx-6">

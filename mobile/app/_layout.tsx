@@ -18,11 +18,13 @@
  */
 
 import { useEffect } from "react";
+import { View } from "react-native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useAuthStore } from "../store/auth";
+import { useEffectiveTheme, THEME_VARIABLES } from "../store/theme";
 import "../global.css";
 
 /**
@@ -46,27 +48,26 @@ const queryClient = new QueryClient({
 
 export default function RootLayout() {
   const checkAuth = useAuthStore((s) => s.checkAuth);
+  const theme = useEffectiveTheme();
 
   useEffect(() => {
     checkAuth();
   }, []);
 
+  const vars = THEME_VARIABLES[theme] || THEME_VARIABLES.dark;
+
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
-        {/*
-          Stack Navigator:
-            - headerShown: false → cada pantalla maneja su propio header
-            - auth: pantallas de login/registro (sin tabs)
-            - (tabs): pantallas principales con navegación por tabs
-        */}
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="auth" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="accounts" options={{ headerShown: false }} />
-          <Stack.Screen name="categories" options={{ headerShown: false }} />
-        </Stack>
-        <StatusBar style="auto" />
+        <View className="flex-1" style={vars as any}>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="auth" options={{ headerShown: false }} />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="accounts" options={{ headerShown: false }} />
+            <Stack.Screen name="categories" options={{ headerShown: false }} />
+          </Stack>
+          <StatusBar style={theme === "dark" ? "light" : "dark"} />
+        </View>
       </QueryClientProvider>
     </SafeAreaProvider>
   );
