@@ -1,13 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import ScreenLayout from "../../components/ScreenLayout";
 import Input from "../../components/Input";
 import Button from "../../components/Button";
 import ErrorMessage from "../../components/ErrorMessage";
 import PickerModal, { type PickerOption } from "../../components/PickerModal";
-import { useCreateCategory } from "../../hooks/useCategories";
+import { useCreateCategory, useUpdateCategory } from "../../hooks/useCategories";
 
 const CATEGORY_TYPES: PickerOption[] = [
   { id: "expense", label: "Gasto", icon: "arrow-down-outline" },
@@ -47,12 +47,21 @@ const COLOR_OPTIONS = [
 
 export default function CategoryFormScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{
+    id?: string;
+    name?: string;
+    icon?: string;
+    color?: string;
+    type?: string;
+  }>();
   const createCategory = useCreateCategory();
+  const updateCategory = useUpdateCategory();
+  const isEditing = !!params.id;
 
-  const [name, setName] = useState("");
-  const [type, setType] = useState("expense");
-  const [icon, setIcon] = useState("pricetags-outline");
-  const [color, setColor] = useState("#c0c0f8");
+  const [name, setName] = useState(params.name ?? "");
+  const [type, setType] = useState(params.type ?? "expense");
+  const [icon, setIcon] = useState(params.icon ?? "pricetags-outline");
+  const [color, setColor] = useState(params.color ?? "#c0c0f8");
   const [error, setError] = useState("");
   const [showTypePicker, setShowTypePicker] = useState(false);
   const [showIconPicker, setShowIconPicker] = useState(false);
@@ -66,16 +75,24 @@ export default function CategoryFormScreen() {
         return;
       }
 
-      await createCategory.mutateAsync({
-        name: name.trim(),
-        type,
-        icon,
-        color,
-      });
+      if (isEditing) {
+        await updateCategory.mutateAsync({
+          id: params.id!,
+          data: { name: name.trim(), type, icon, color },
+        });
+      } else {
+        await createCategory.mutateAsync({
+          name: name.trim(),
+          type,
+          icon,
+          color,
+        });
+      }
 
       router.back();
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Error al crear la categoría");
+      const msg = err.response?.data?.detail || "Error al guardar la categoría";
+      setError(msg);
     }
   };
 
@@ -89,7 +106,7 @@ export default function CategoryFormScreen() {
           <TouchableOpacity onPress={() => router.back()} className="mr-4">
             <Ionicons name="close" size={24} color="#f8f8f8" />
           </TouchableOpacity>
-          <Text className="text-text-primary text-2xl font-bold">Nueva categoría</Text>
+          <Text className="text-text-primary text-2xl font-bold">{isEditing ? "Editar categoría" : "Nueva categoría"}</Text>
         </View>
 
         <View className="px-6">
@@ -141,10 +158,10 @@ export default function CategoryFormScreen() {
           <ErrorMessage message={error} className="mb-4" />
 
           <Button
-            title="Crear categoría"
+            title={isEditing ? "Guardar cambios" : "Crear categoría"}
             onPress={handleSubmit}
             size="lg"
-            loading={createCategory.isPending}
+            loading={createCategory.isPending || updateCategory.isPending}
           />
         </View>
       </ScrollView>

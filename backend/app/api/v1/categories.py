@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.models.user import User
-from app.schemas.category import CategoryCreate, CategoryResponse
+from app.schemas.category import CategoryCreate, CategoryUpdate, CategoryResponse
 from app.services import category_service
 
 router = APIRouter(prefix="/categories", tags=["categories"])
@@ -27,6 +27,16 @@ async def create_category(
     db: AsyncSession = Depends(get_db),
 ):
     return await category_service.create_category(db, current_user, payload)
+
+
+@router.put("/{category_id}", response_model=CategoryResponse)
+async def update_category(
+    category_id: uuid.UUID,
+    payload: CategoryUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await category_service.update_category(db, current_user, category_id, payload)
 
 
 @router.delete("/{category_id}", status_code=status.HTTP_204_NO_CONTENT)

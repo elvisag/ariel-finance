@@ -183,6 +183,10 @@ export const categoriesApi = {
   create: (data: Omit<Category, "id" | "created_at">) =>
     api.post<Category>("/categories/", data),
 
+  /** Actualizar una categoría propia */
+  update: (id: string, data: Partial<Omit<Category, "id" | "created_at">>) =>
+    api.put<Category>(`/categories/${id}`, data),
+
   /** Eliminar una categoría propia */
   delete: (id: string) => api.delete(`/categories/${id}`),
 };

@@ -107,33 +107,50 @@ function CategoryCard({
   onDelete?: () => void;
   deleting?: boolean;
 }) {
+  const router = useRouter();
   const color = category.color || "#c0c0f8";
 
   return (
-    <Card className="flex-row items-center mb-3 p-4">
-      <View
-        className="w-12 h-12 rounded-full items-center justify-center mr-4"
-        style={{ backgroundColor: `${color}20` }}
-      >
-        <Ionicons
-          name={(category.icon || "pricetags-outline") as any}
-          size={20}
-          color={color}
-        />
-      </View>
-      <View className="flex-1">
-        <Text className="text-text-primary font-semibold text-base">{category.name}</Text>
-        <Text className="text-text-muted text-sm">{typeLabels[category.type] || category.type}</Text>
-      </View>
-      {deletable && (
-        <TouchableOpacity className="p-2" onPress={onDelete} disabled={deleting}>
-          {deleting ? (
-            <Ionicons name="hourglass" size={18} color="#ef4444" />
-          ) : (
-            <Ionicons name="trash-outline" size={18} color="#ef4444" />
-          )}
-        </TouchableOpacity>
-      )}
-    </Card>
+    <TouchableOpacity
+      disabled={!deletable}
+      onPress={() =>
+        router.push({
+          pathname: "/categories/form",
+          params: {
+            id: category.id,
+            name: category.name,
+            icon: category.icon,
+            color: category.color,
+            type: category.type,
+          },
+        })
+      }
+    >
+      <Card className="flex-row items-center mb-3 p-4">
+        <View
+          className="w-12 h-12 rounded-full items-center justify-center mr-4"
+          style={{ backgroundColor: `${color}20` }}
+        >
+          <Ionicons
+            name={(category.icon || "pricetags-outline") as any}
+            size={20}
+            color={color}
+          />
+        </View>
+        <View className="flex-1">
+          <Text className="text-text-primary font-semibold text-base">{category.name}</Text>
+          <Text className="text-text-muted text-sm">{typeLabels[category.type] || category.type}</Text>
+        </View>
+        {deletable && (
+          <TouchableOpacity className="p-2" onPress={onDelete} disabled={deleting}>
+            {deleting ? (
+              <Ionicons name="hourglass" size={18} color="#ef4444" />
+            ) : (
+              <Ionicons name="trash-outline" size={18} color="#ef4444" />
+            )}
+          </TouchableOpacity>
+        )}
+      </Card>
+    </TouchableOpacity>
   );
 }

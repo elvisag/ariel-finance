@@ -11,6 +11,13 @@ class CategoryCreate(BaseModel):
     type: str
 
 
+class CategoryUpdate(BaseModel):
+    name: str | None = None
+    icon: str | None = None
+    color: str | None = None
+    type: str | None = None
+
+
 class CategoryResponse(BaseModel):
     id: uuid.UUID
     name: str
