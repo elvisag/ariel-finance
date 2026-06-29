@@ -10,7 +10,9 @@ Monorepo con dos proyectos independientes: `backend/` (FastAPI) y `mobile/` (Exp
 - **Auth guard**: Root layout llama `checkAuth()` al montar, entry point redirige según estado
 - **Google OAuth flow**: `useGoogleAuth` hook → `expo-auth-session` → id_token → POST `/auth/google` → JWT propio
 - **Paleta de colores**: Fondos neutros oscuros (#181818 bg, #383838 surface), acento periwinkle (#c0c0f8)
+- **Tema**: CSS variables con NativeWind, 3 opciones (Claro/Oscuro/Sistema), persistido con Zustand + AsyncStorage
 - **Base de datos**: PostgreSQL en producción, SQLite para desarrollo local
+- **Migraciones**: Alembic con migration inicial `create_table`-only
 
 ## Comandos
 
@@ -19,7 +21,9 @@ Monorepo con dos proyectos independientes: `backend/` (FastAPI) y `mobile/` (Exp
 cd backend
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000   # Desarrollo
-pytest                                    # Tests
+pytest                                    # Tests (49 tests, 7 test files)
+alembic upgrade head                      # Migraciones
+alembic revision --autogenerate -m "msg"  # Nueva migración
 ```
 
 ### Frontend
@@ -37,142 +41,144 @@ npx tsc --noEmit                          # TypeScript check
 docker compose up -d           # PostgreSQL + Redis + Backend
 ```
 
-## Componentes creados (mobile/components/)
+## Componentes (mobile/components/)
 
-| Componente | Props | Uso |
+| Componente | Props clave | Uso |
 |---|---|---|
-| `Button` | variant (primary/secondary/danger/ghost), size, loading, icon | Botones reutilizables con variantes y loading |
-| `Input` | label, error, + TextInputProps | Input con label y mensaje de error |
-| `Card` | children, className | Contenedor con bg-surface y rounded-2xl |
-| `ScreenLayout` | children, safeArea | SafeAreaView + bg-bg + flex-1 |
-| `LoadingScreen` | message | Pantalla completa con spinner |
-| `ErrorMessage` | message | Banner de error con ícono |
-| `PickerModal` | open, options, selectedId, onSelect, title | Modal bottom-sheet para seleccionar de una lista |
+| `Button` | variant, size, loading, icon | Botones reutilizables |
+| `Input` | label, error, + TextInputProps | Input con label y error |
+| `Card` | children, className | Contenedor con bg-surface |
+| `ScreenLayout` | children, safeArea | SafeAreaView + bg-bg |
+| `LoadingScreen` | message | Pantalla de carga con spinner |
+| `ErrorMessage` | message | Banner de error |
+| `PickerModal` | open, options, selectedId, onSelect | Bottom-sheet selector |
+| `TransactionRow` | tx, showAccount, accountName, onPress | Fila de movimiento (con badge recurrente) |
+| `ThemeToggle` | — | Selector Claro/Oscuro/Sistema |
 
-## Hooks creados (mobile/hooks/)
+## Hooks (mobile/hooks/)
 
-| Hook | Query/Mutation | Descripción |
+| Hook | Tipo | Descripción |
 |---|---|---|
 | `useGoogleAuth` | — | Google OAuth con expo-auth-session |
 | `useAccounts` | query | Listar cuentas |
-| `useCreateAccount` | mutation | Crear cuenta + invalida accounts |
-| `useUpdateAccount` | mutation | Actualizar cuenta + invalida accounts |
-| `useDeleteAccount` | mutation | Eliminar cuenta + invalida accounts |
+| `useCreateAccount` | mutation | + invalida accounts |
+| `useUpdateAccount` | mutation | + invalida accounts |
+| `useDeleteAccount` | mutation | + invalida accounts |
+| `useTransactions` | query | Listar con filtros (account_id, type, is_recurring, search) |
+| `useCreateTransaction` | mutation | + invalida transactions + accounts |
+| `useUpdateTransaction` | mutation | + invalida transactions + accounts |
+| `useDeleteTransaction` | mutation | + invalida transactions + accounts |
+| `useTransferMoney` | mutation | + invalida transactions + accounts |
 | `useCategories` | query | Listar categorías |
-| `useTransactions` | query | Listar transacciones con filtros |
-| `useCreateTransaction` | mutation | Crear transacción + invalida transactions y accounts |
+| `useCreateCategory` | mutation | + invalida categories |
+| `useUpdateCategory` | mutation | + invalida categories |
+| `useDeleteCategory` | mutation | + invalida categories |
 | `useBudgets` | query | Listar presupuestos |
-| `useCreateBudget` | mutation | Crear presupuesto + invalida budgets |
-| `useDeleteBudget` | mutation | Eliminar presupuesto + invalida budgets |
+| `useCreateBudget` | mutation | + invalida budgets |
+| `useUpdateBudget` | mutation | + invalida budgets |
+| `useDeleteBudget` | mutation | + invalida budgets |
+| `useAnalytics` | query | MonthlySummary + MonthlyTrend + SpendingByCategory |
 
 ## Pantallas implementadas
 
-| Ruta | Pantalla | Estado |
+| Ruta | Pantalla | Funcionalidad |
 |---|---|---|
-| `/auth/login` | Login | Completo (email + Google) |
-| `/auth/register` | Registro | Completo (email + Google) |
-| `/(tabs)/index` | Dashboard | Completo (balance real, resumen mensual, últimos 5 movs) |
-| `/(tabs)/add` | Añadir transacción | Completo (conectado al API, selectores cuenta/categoría) |
-| `/(tabs)/transactions` | Movimientos | Placeholder |
-| `/(tabs)/budgets` | Presupuestos | Completo (lista con progreso, creación, eliminación) |
-| `/(tabs)/profile` | Perfil | Completo (ver perfil, logout, navegación a cuentas) |
-| `/accounts/index` | Listado cuentas | Completo (lista, editar, eliminar) |
-| `/accounts/form` | Formulario cuenta | Completo (crear/editar con tipo, moneda, saldo) |
+| `/auth/login` | Login | Email + Google OAuth |
+| `/auth/register` | Registro | Email + Google OAuth |
+| `/(tabs)/index` | Dashboard | Balance real, resumen mensual, últimos 5 movs, botón a reportes |
+| `/(tabs)/add` | Añadir | Crear/editar transacción, toggle recurrente, pickers cuenta/categoría |
+| `/(tabs)/transactions` | Movimientos | FlatList agrupado por fecha, filtros tipo/cuenta, buscador por descripción, pull-to-refresh, editar/eliminar |
+| `/(tabs)/budgets` | Presupuestos | Lista con barra de progreso, crear/editar/eliminar |
+| `/(tabs)/profile` | Perfil | Info usuario, logout, theme toggle, enlaces a cuentas/categorías/recurrentes |
+| `/accounts/index` | Cuentas | Lista con balance, editar, eliminar |
+| `/accounts/form` | Cuenta | Crear/editar con tipo, moneda, saldo |
+| `/categories/index` | Categorías | Lista (globales + propias), editar, eliminar |
+| `/categories/form` | Categoría | Crear/editar con nombre, tipo, icono, color |
+| `/reports` | Reportes | Resumen mensual, bar chart, donut chart, breakdown por categoría |
+| `/recurring` | Recurrentes | Lista de gastos recurrentes, próxima fecha, editar/eliminar |
 
 ## Estándares de código
 
 ### Backend (Python)
-- **Async toda la vida**: Usar `async def` en endpoints, `AsyncSession` para DB, `await` en queries
+- **Async toda la vida**: `async def` en endpoints, `AsyncSession` para DB
 - **Modelos**: SQLAlchemy 2.0 style (`Mapped`, `mapped_column`), UUID como PK
-- **Schemas**: Pydantic v2 con `model_config = {"from_attributes": True}` para responses
-- **Endpoints**: Separar por recurso en `api/v1/`, usar `Depends(get_current_user)` para auth
-- **PUT/PATCH**: Usar `exclude_unset=True` en `model_dump()` para solo actualizar campos enviados
-- **Errores**: HTTPException con código apropiado (401, 404, 409, etc.)
-- **Naming**: `snake_case` para todo (archivos, funciones, variables)
+- **Schemas**: Pydantic v2 con `model_config = {"from_attributes": True}`
+- **Endpoints**: Separar por recurso en `api/v1/`, delegar en services
+- **Services**: Lógica de negocio en `app/services/*.py`, routes son thin controllers
+- **PUT/PATCH**: Usar `exclude_unset=True` en `model_dump()`
+- **Errores**: HTTPException con código apropiado
+- **Naming**: `snake_case`
+- **Recurrencia**: `selectinload(Transaction.account)` para evitar MissingGreenlet en async
 
 ### Frontend (TypeScript/React Native)
-- **Naming**: `camelCase` para variables/funciones, `PascalCase` para componentes/tipos
-- **Estilos**: NativeWind (Tailwind) — usar colores personalizados (`bg-bg`, `bg-bg-surface`, `text-text-primary`, `text-text-secondary`, `text-primary-300`, `border-border`)
-- **Iconos**: Ionicons, castear `name` con `as any` cuando el nombre venga de una variable
-- **Estado**: Zustand para estado global (solo auth), React Query para datos del servidor
-- **Ruteo**: Expo Router (file-based) — las pantallas van en `app/`
-- **API**: Axios con interceptors para token JWT, todo tipado en `services/finance.ts`
-- **Componentes**: Preferir componentes funcionales, mantenerlos pequeños
-- **Auth guard**: Entry point (`app/index.tsx`) maneja loading spinner y redirección según `isAuthenticated`
-- **Auto-redirect**: Pantallas auth redirigen a `(tabs)` via `useEffect` que escucha `isAuthenticated`
-- **Google OAuth**: Hook `useGoogleAuth` encapsula `expo-auth-session`, se reusa en login y register
-- **Hooks de datos**: Usar `useQuery` / `useMutation` con invalidation de queries relacionadas
-- **Tests**: Jest con mocks de SecureStore, expo-web-browser, expo-auth-session, y Zustand
+- **Naming**: `camelCase` variables/funciones, `PascalCase` componentes/tipos
+- **Estilos**: NativeWind — colores `bg-bg`, `bg-bg-surface`, `text-text-primary`, `text-text-secondary`, `text-primary-300`, `border-border`
+- **Iconos**: Ionicons, castear `name` con `as any`
+- **Estado**: Zustand para auth + theme global, React Query para datos del servidor
+- **Ruteo**: Expo Router (file-based)
+- **API**: Axios con interceptors para token JWT, tipado en `services/finance.ts`
+- **Theme**: CSS variables via `react-native-css-interop`, persistencia con Zustand + AsyncStorage
+- **Auth guard**: Entry point maneja loading + redirección según `isAuthenticated`
+- **Hooks de datos**: `useQuery`/`useMutation` con invalidation de queries relacionadas
 
 ## Decisiones de arquitectura
 
-- **Por qué SQLite en desarrollo**: Elimina dependencia de Docker/PostgreSQL para desarrollo local rápido
-- **Por qué UUID como PK**: Escalabilidad, seguridad (no exponer IDs secuenciales), soporte multi-base de datos
-- **Por qué NativeWind**: Rendimiento (compila a estilo plano), tema claro/oscuro nativo, ecosistema Tailwind
-- **Por qué Zustand + React Query**: Zustand para estado cliente (auth), React Query para estado servidor (accounts, transactions, etc.)
-- **Por qué FastAPI async**: Rendimiento, documentación automática (OpenAPI), validación con Pydantic
+- **SQLite en desarrollo**: Elimina dependencia de Docker para desarrollo local rápido
+- **UUID como PK**: Escalabilidad, seguridad, soporte multi-DB
+- **NativeWind**: Rendimiento, tema dinámico vía CSS variables
+- **Zustand + React Query**: Zustand para estado cliente (auth, theme), React Query para estado servidor
+- **FastAPI async**: Rendimiento, OpenAPI auto, validación Pydantic
+- **Capa de servicios**: Routes delgadas (~5-10 líneas), toda la lógica en services
+- **Recurrencia en Transaction**: Campos `recurrence_*` nullable en lugar de tabla separada
+- **Scheduler manual**: `calendar.monthrange` en lugar de python-dateutil
+- **Gráficos caseros**: Views en lugar de librería externa (evita problemas WSL)
+- **Reports y Recurring fuera de tabs**: Rutas planas (`/reports`, `/recurring`) para mantener 5 tabs
 
 ## Cosas que evitar
 
-- **NO** usar `sync` en endpoints de FastAPI — siempre `async`
-- **NO** usar `npm` para instalar paquetes Expo — usar `npx expo install` (respeta versiones de SDK)
-- **NO** hardcodear URLs de API — usar `EXPO_PUBLIC_API_URL` en `.env`
-- **NO** almacenar tokens en AsyncStorage — usar `expo-secure-store`
-- **NO** crear migraciones manuales — usar Alembic `alembic revision --autogenerate`
-- **NO** mezclar estilos inline con NativeWind — elegir uno y mantener consistencia
-- **NO** commits directos a `main` sin PR (cuando haya colaboradores)
-- **NO** olvidar redirigir después de Google OAuth — el hook guarda el token y llama `checkAuth()`, la redirección la maneja el `useEffect` en la pantalla
-- **NO** renderizar el Stack de Expo Router condicionalmente — el loading se maneja en `app/index.tsx` (no en el layout)
-- **NO** olvidar invalidar queries relacionadas en `onSuccess` de mutations (ej: crear transacción invalida transactions + accounts)
+- **NO** usar `sync` en endpoints FastAPI
+- **NO** usar `npm install` en Expo — usar `npx expo install`
+- **NO** hardcodear URLs — usar `EXPO_PUBLIC_API_URL`
+- **NO** guardar tokens en AsyncStorage — usar `expo-secure-store`
+- **NO** mezclar estilos inline con NativeWind
+- **NO** olvidar invalidar queries relacionadas en mutations
+- **NO** usar `create_all` para migraciones — usar Alembic
+- **NO** renderizar Stack condicionalmente — loading en `app/index.tsx`
 
 ## Convenciones de git
 
-- Mensajes de commit en español
-- Prefijos: `feat:`, `fix:`, `refactor:`, `docs:`, `style:`, `chore:`
+- Mensajes en español con prefijos: `feat:`, `fix:`, `refactor:`, `docs:`, `style:`, `chore:`
 - Rama principal: `main`
 
-## Checklist de revisión
-
-- [ ] ¿TypeScript/Python compila sin errores?
-- [ ] ¿Los endpoints tienen manejo de errores apropiado?
-- [ ] ¿Las migraciones están actualizadas?
-- [ ] ¿Los tokens/secretos están en `.env` y no hardcodeados?
-- [ ] ¿Las queries SQL están optimizadas (sin N+1)?
-- [ ] ¿El estilo sigue NativeWind consistente con la paleta?
-- [ ] ¿La API retorna los códigos HTTP correctos?
-- [ ] ¿Los schemas Pydantic validan correctamente?
-- [ ] ¿El auth guard redirige correctamente según `isAuthenticated`?
-- [ ] ¿Google OAuth funciona en ambos login y register?
-- [ ] ¿`checkAuth()` se llama en el layout raíz al montar?
-- [ ] ¿Las mutations invalidan las queries correctas?
-
-## Sesión — Estado del proyecto
+## Estado del proyecto
 
 ### Completado ✅
 - Auth: email + Google OAuth (backend y frontend)
 - Auth guard con checkAuth y redirección
-- Dashboard con balance real, resumen mensual, últimos movs
-- Añadir transacción conectado al API con selectores
-- CRUD de cuentas (backend PUT/DELETE, frontend listado + formulario)
-- Presupuestos con progreso, creación y eliminación
-- Paleta de colores personalizada (basada en diseño de referencia)
-- 7 componentes reutilizables
-- 11 hooks con React Query
-- Tests: auth store, API services, Google hook, finance services
+- Dashboard con balance, resumen, últimos movs
+- CRUD completo de transacciones (crear, editar, eliminar)
+- CRUD completo de cuentas (backend + frontend)
+- Transferencias entre cuentas (2 transacciones, ambos balances)
+- Gastos recurrentes (backend: modelo + scheduler; frontend: toggle + pantalla dedicada)
+- CRUD completo de categorías (backend + frontend, editar incluido)
+- Presupuestos con progreso, crear/editar/eliminar
+- Gráficos / Reportes (3 endpoints analytics, 3 hooks, pantalla dedicada)
+- Buscador de movimientos por descripción (debounce 300ms)
+- Pull-to-refresh en todas las listas
+- Dark/Light theme toggle (CSS variables, Zustand persist, 3 opciones)
+- Capa de servicios backend (7 módulos)
+- Migraciones Alembic (migration inicial limpia)
+- 9 componentes reutilizables
+- 18 hooks con React Query
+- 49 tests backend (pytest), 4 test files frontend (Jest)
+- Tema de colores con CSS variables (sin dark: class per-component)
 
 ### Pendiente 🔶
-- Pantalla de movimientos (transactions list) con FlatList y filtros
-- Editar/eliminar transacciones desde la lista
-- Transferencias entre cuentas (backend + frontend)
-- Gastos recurrentes (backend scheduler)
-- Gráficos / reportes (analytics endpoints + charts)
-- Migraciones Alembic (actualmente usa create_all)
-- Capa de servicios en backend (app/services/ vacío)
+- Editar presupuesto desde frontend (PUT ya existe en backend)
+- Exportar datos (CSV/PDF)
+- Paginación en transacciones
+- Frontend tests adicionales (Jest + RNTL)
 - Offline support / React Query persist
 - E2E tests
 - CI/CD, linting, formateo
-- Pantalla de categorías (CRUD completa)
-- Editar transacción
-- Pull-to-refresh en listas
-- Dark/Light theme toggle
 - Notificaciones y alertas de presupuestos
