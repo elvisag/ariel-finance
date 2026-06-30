@@ -80,7 +80,7 @@ describe("useGoogleAuth hook", () => {
       mockPromptAsync,
     ]);
 
-    rerender();
+    rerender(undefined);
 
     await waitFor(() => {
       expect(authApi.googleAuth).toHaveBeenCalledWith("google-id-token");
@@ -101,7 +101,7 @@ describe("useGoogleAuth hook", () => {
       mockPromptAsync,
     ]);
 
-    rerender();
+    rerender(undefined);
 
     await waitFor(() => {
       expect(result.current.error).toBe("Token inválido");
@@ -118,7 +118,7 @@ describe("useGoogleAuth hook", () => {
       mockPromptAsync,
     ]);
 
-    rerender();
+    rerender(undefined);
 
     expect(result.current.error).toBe("Autenticación cancelada o fallida");
   });

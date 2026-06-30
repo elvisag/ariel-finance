@@ -17,8 +17,8 @@ describe("api.ts — Axios client", () => {
     const SecureStore = require("expo-secure-store");
     SecureStore.getItemAsync.mockResolvedValue("test-token-123");
 
-    const config = await api.interceptors.request.handlers[0].fulfilled({
-      headers: {},
+    const config = await api.interceptors.request.handlers![0].fulfilled({
+      headers: {} as any,
     });
 
     expect(config.headers.Authorization).toBe("Bearer test-token-123");
@@ -28,8 +28,8 @@ describe("api.ts — Axios client", () => {
     const SecureStore = require("expo-secure-store");
     SecureStore.getItemAsync.mockResolvedValue(null);
 
-    const config = await api.interceptors.request.handlers[0].fulfilled({
-      headers: {},
+    const config = await api.interceptors.request.handlers![0].fulfilled({
+      headers: {} as any,
     });
 
     expect(config.headers.Authorization).toBeUndefined();
@@ -40,7 +40,7 @@ describe("api.ts — Axios client", () => {
     const error = { response: { status: 401 } };
 
     await expect(
-      api.interceptors.response.handlers[0].rejected(error)
+      api.interceptors.response.handlers![0].rejected!(error)
     ).rejects.toBe(error);
 
     expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith("auth_token");
@@ -51,7 +51,7 @@ describe("api.ts — Axios client", () => {
     const error = { response: { status: 500 } };
 
     await expect(
-      api.interceptors.response.handlers[0].rejected(error)
+      api.interceptors.response.handlers![0].rejected!(error)
     ).rejects.toBe(error);
 
     expect(SecureStore.deleteItemAsync).not.toHaveBeenCalled();
