@@ -9,6 +9,7 @@ import LoadingScreen from "../../components/LoadingScreen";
 import TransactionRow from "../../components/TransactionRow";
 import { useAccounts } from "../../hooks/useAccounts";
 import { useTransactions } from "../../hooks/useTransactions";
+import { useBudgetAlerts } from "../../hooks/useBudgets";
 
 function formatCurrency(n: number) {
   return `$${Math.abs(n).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -33,6 +34,12 @@ export default function HomeScreen() {
     end_date: monthRange.end,
   });
   const { transactions: recentTx, isLoading: loadingRecent, refetch: refetchRecent } = useTransactions();
+
+  const { data: budgetAlerts } = useBudgetAlerts();
+  const activeAlerts = useMemo(
+    () => (budgetAlerts || []).filter((a) => a.status !== "ok"),
+    [budgetAlerts],
+  );
 
   const totalBalance = useMemo(
     () => (accounts || []).reduce((sum, a) => sum + a.balance, 0),
@@ -123,7 +130,36 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        <View className="mx-6 mt-8 mb-8">
+        {activeAlerts.length > 0 && (
+          <View className="mx-6 mt-6 mb-2">
+            <View className="flex-row items-center mb-3">
+              <Ionicons name="alert-circle" size={18} color="#f59e0b" />
+              <Text className="text-text-primary text-lg font-bold ml-2">Alertas de presupuestos</Text>
+            </View>
+            {activeAlerts.map((a) => (
+              <TouchableOpacity
+                key={a.budget_id}
+                className={`p-4 rounded-2xl mb-2 flex-row items-center ${a.status === "danger" ? "bg-red-500/15" : "bg-yellow-500/15"}`}
+                onPress={() => router.push("/(tabs)/budgets")}
+              >
+                <View className="w-10 h-10 rounded-full items-center justify-center mr-3" style={{ backgroundColor: `${a.category_color}20` }}>
+                  <Ionicons name={a.category_icon as any} size={20} color={a.category_color} />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-text-primary font-semibold">{a.category_name}</Text>
+                  <Text className="text-text-secondary text-sm">
+                    {a.status === "danger" ? `Excedido por $${(a.spent - a.budgeted).toLocaleString("es-AR", { minimumFractionDigits: 2 })}` : `Te queda $${a.remaining.toLocaleString("es-AR", { minimumFractionDigits: 2 })}`}
+                  </Text>
+                </View>
+                <Text className={`font-bold ${a.status === "danger" ? "text-red-400" : "text-yellow-400"}`}>
+                  {a.percentage}%
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        <View className="mx-6 mt-6 mb-8">
           <Text className="text-text-primary text-xl font-bold mb-4">Últimos movimientos</Text>
           {recent.length === 0 ? (
             <Card className="p-8 items-center">

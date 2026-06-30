@@ -191,6 +191,9 @@ function BudgetCard({
   const barColor = overBudget ? "#ef4444" : pct > 80 ? "#f59e0b" : "#c0c0f8";
   const periodLabel = { weekly: "Semanal", monthly: "Mensual", yearly: "Anual" }[period] || period;
 
+  const alertIcon = overBudget ? "alert-circle" : pct > 80 ? "alert-outline" : null;
+  const alertColor = overBudget ? "#ef4444" : "#f59e0b";
+
   return (
     <Card className="mb-3 p-4">
       <View className="flex-row items-center mb-3">
@@ -201,7 +204,12 @@ function BudgetCard({
           <Ionicons name={categoryIcon as any} size={20} color={categoryColor} />
         </View>
         <View className="flex-1">
-          <Text className="text-text-primary font-semibold">{categoryName}</Text>
+          <View className="flex-row items-center">
+            <Text className="text-text-primary font-semibold">{categoryName}</Text>
+            {alertIcon && (
+              <Ionicons name={alertIcon} size={16} color={alertColor} style={{ marginLeft: 6 }} />
+            )}
+          </View>
           <Text className="text-text-muted text-xs">{periodLabel}</Text>
         </View>
         <TouchableOpacity className="mr-3 p-1" onPress={onEdit}>

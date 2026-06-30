@@ -11,7 +11,7 @@ Aplicación móvil de finanzas personales multi-usuario. Permite gestionar ingre
 | **Base de datos** | PostgreSQL (producción) / SQLite (desarrollo) |
 | **Autenticación** | JWT (python-jose + bcrypt) + Google OAuth (expo-auth-session) |
 | **Migraciones** | Alembic (autogenerate) |
-| **Testing** | pytest backend (49 tests) + Jest frontend (4 test files) |
+| **Testing** | pytest backend (53 tests) + Jest frontend (57 tests, 7 files) |
 
 ## Estructura del proyecto
 
@@ -23,9 +23,9 @@ ariel-finance/
 │   │   ├── core/            # Config, seguridad, base de datos, scheduler
 │   │   ├── models/          # SQLAlchemy: User, Account, Transaction, Category, Budget
 │   │   ├── schemas/         # Pydantic (validación y serialización)
-│   │   └── services/        # 7 módulos de lógica de negocio
+│   │   └── services/        # 8 módulos de lógica de negocio
 │   ├── alembic/             # Migraciones (migration inicial limpia)
-│   └── tests/               # 7 test files, 49 tests
+│   └── tests/               # 7 test files, 53 tests
 ├── mobile/                  # App móvil (Expo Router)
 │   ├── app/                 # 19 pantallas (file-based routing)
 │   │   ├── auth/            # Login / Registro (email + Google OAuth)
@@ -33,10 +33,10 @@ ariel-finance/
 │   │   ├── categories/      # CRUD de categorías
 │   │   └── (tabs)/          # Inicio, Movimientos, Añadir, Presupuestos, Perfil
 │   ├── components/          # 9 componentes reutilizables
-│   ├── hooks/               # 6 hooks con React Query
+│   ├── hooks/               # 7 hooks con React Query
 │   ├── services/            # Cliente API (Axios + SecureStore)
 │   ├── store/               # Estado global: auth + theme (Zustand + persist)
-│   └── tests/               # 4 test files
+│   └── tests/               # 7 test files, 57 tests
 ├── docker-compose.yml
 └── .gitignore
 ```
@@ -141,9 +141,15 @@ EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=<web-client-id>
 | Método | Ruta | Descripción |
 |--------|------|-------------|
 | GET | `/api/v1/budgets/` | Listar presupuestos |
+| GET | `/api/v1/budgets/alerts` | Alertas (gasto vs límite por presupuesto) |
 | POST | `/api/v1/budgets/` | Crear |
 | PUT | `/api/v1/budgets/{id}` | Actualizar |
 | DELETE | `/api/v1/budgets/{id}` | Eliminar |
+
+### Export
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/api/v1/export/transactions/pdf` | Exportar movimientos a PDF (con filtros) |
 
 ### Analytics
 | Método | Ruta | Descripción |

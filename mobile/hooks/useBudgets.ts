@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { budgetsApi } from "../services/finance";
-import type { Budget } from "../services/finance";
+import type { Budget, BudgetAlert } from "../services/finance";
 
 export function useBudgets() {
   return useQuery({
@@ -32,5 +32,13 @@ export function useDeleteBudget() {
   return useMutation({
     mutationFn: (id: string) => budgetsApi.delete(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["budgets"] }),
+  });
+}
+
+export function useBudgetAlerts() {
+  return useQuery({
+    queryKey: ["budgets", "alerts"],
+    queryFn: () => budgetsApi.alerts().then((r) => r.data),
+    refetchInterval: 60_000,
   });
 }

@@ -225,9 +225,26 @@ export const analyticsApi = {
     api.get<SpendingByCategory>("/analytics/spending-by-category", { params: { start_date, end_date } }),
 };
 
+export interface BudgetAlert {
+  budget_id: string;
+  category_id: string;
+  category_name: string;
+  category_icon: string;
+  category_color: string;
+  budgeted: number;
+  spent: number;
+  percentage: number;
+  remaining: number;
+  period: string;
+  status: "ok" | "warning" | "danger";
+}
+
 export const budgetsApi = {
   /** Listar presupuestos del usuario */
   list: () => api.get<Budget[]>("/budgets/"),
+
+  /** Alertas de presupuestos (gasto vs límite) */
+  alerts: () => api.get<BudgetAlert[]>("/budgets/alerts"),
 
   /** Crear un presupuesto */
   create: (data: Omit<Budget, "id" | "created_at">) =>

@@ -21,7 +21,7 @@ Monorepo con dos proyectos independientes: `backend/` (FastAPI) y `mobile/` (Exp
 cd backend
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000   # Desarrollo
-pytest                                    # Tests (49 tests, 7 test files)
+pytest                                    # Tests (53 tests, 7 test files)
 alembic upgrade head                      # Migraciones
 alembic revision --autogenerate -m "msg"  # Nueva migración
 ```
@@ -170,15 +170,16 @@ docker compose up -d           # PostgreSQL + Redis + Backend
 - Migraciones Alembic (migration inicial limpia)
 - 9 componentes reutilizables
 - 18 hooks con React Query
-- 49 tests backend (pytest), 4 test files frontend (Jest)
+- 53 tests backend (pytest), 57 tests frontend (Jest + RNTL)
 - Tema de colores con CSS variables (sin dark: class per-component)
+- Export CSV/PDF (fpdf2)
+- Paginación en transacciones (skip/limit/total + scroll infinito)
+- Editar presupuesto desde frontend
+- Alertas de presupuestos (endpoint GET /budgets/alerts + dashboard + badges)
+- Buscador de movimientos por descripción (debounce 300ms)
 
 ### Pendiente 🔶
-- Editar presupuesto desde frontend (PUT ya existe en backend)
-- Exportar datos (CSV/PDF)
-- Paginación en transacciones
-- Frontend tests adicionales (Jest + RNTL)
 - Offline support / React Query persist
 - E2E tests
 - CI/CD, linting, formateo
-- Notificaciones y alertas de presupuestos
+- Notificaciones push

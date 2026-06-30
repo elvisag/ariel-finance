@@ -29,3 +29,17 @@ class BudgetResponse(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class BudgetAlert(BaseModel):
+    budget_id: uuid.UUID
+    category_id: uuid.UUID
+    category_name: str
+    category_icon: str
+    category_color: str
+    budgeted: Decimal
+    spent: Decimal
+    percentage: float
+    remaining: Decimal
+    period: str
+    status: str  # "ok" | "warning" | "danger"
