@@ -27,7 +27,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from alembic.config import Config
 from alembic import command
 
-from app.api.v1 import auth, users, accounts, categories, transactions, budgets, analytics
+from app.api.v1 import auth, users, accounts, categories, transactions, budgets, analytics, export
 from app.core.config import settings
 from app.core.database import engine
 from app.core.scheduler import start_scheduler
@@ -98,6 +98,7 @@ app.include_router(categories.router, prefix="/api/v1")
 app.include_router(transactions.router, prefix="/api/v1")
 app.include_router(budgets.router, prefix="/api/v1")
 app.include_router(analytics.router, prefix="/api/v1")
+app.include_router(export.router, prefix="/api/v1")
 
 
 # ── Health Check ───────────────────────────────────────────────

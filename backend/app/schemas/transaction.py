@@ -47,6 +47,13 @@ class TransferResponse(BaseModel):
     to_transaction: TransactionResponse
 
 
+class PaginatedTransactions(BaseModel):
+    items: list[TransactionResponse]
+    total: int
+    skip: int
+    limit: int
+
+
 class TransactionUpdate(BaseModel):
     account_id: uuid.UUID | None = None
     category_id: uuid.UUID | None = None

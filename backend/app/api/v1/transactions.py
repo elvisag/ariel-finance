@@ -1,19 +1,19 @@
 import uuid
 from datetime import date
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.models.user import User
-from app.schemas.transaction import TransactionCreate, TransactionUpdate, TransactionResponse, TransferCreate, TransferResponse
+from app.schemas.transaction import TransactionCreate, TransactionUpdate, TransactionResponse, TransferCreate, TransferResponse, PaginatedTransactions
 from app.services import transaction_service
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
 
 
-@router.get("/", response_model=list[TransactionResponse])
+@router.get("/", response_model=PaginatedTransactions)
 async def list_transactions(
     account_id: uuid.UUID | None = None,
     start_date: date | None = None,
@@ -21,10 +21,12 @@ async def list_transactions(
     type: str | None = None,
     is_recurring: bool | None = None,
     search: str | None = None,
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=50, ge=1, le=200),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    return await transaction_service.list_transactions(db, current_user, account_id, start_date, end_date, type, is_recurring, search)
+    return await transaction_service.list_transactions(db, current_user, account_id, start_date, end_date, type, is_recurring, search, skip, limit)
 
 
 @router.post("/", response_model=TransactionResponse, status_code=status.HTTP_201_CREATED)

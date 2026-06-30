@@ -28,11 +28,11 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const { data: accounts, isLoading: loadingAccounts, refetch: refetchAccounts } = useAccounts();
-  const { data: monthTx, isLoading: loadingMonth, refetch: refetchMonth } = useTransactions({
+  const { transactions: monthTx, isLoading: loadingMonth, refetch: refetchMonth } = useTransactions({
     start_date: monthRange.start,
     end_date: monthRange.end,
   });
-  const { data: recentTx, isLoading: loadingRecent, refetch: refetchRecent } = useTransactions();
+  const { transactions: recentTx, isLoading: loadingRecent, refetch: refetchRecent } = useTransactions();
 
   const totalBalance = useMemo(
     () => (accounts || []).reduce((sum, a) => sum + a.balance, 0),
@@ -40,16 +40,16 @@ export default function HomeScreen() {
   );
 
   const monthIncome = useMemo(
-    () => (monthTx || []).filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0),
+    () => monthTx.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0),
     [monthTx],
   );
 
   const monthExpense = useMemo(
-    () => (monthTx || []).filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0),
+    () => monthTx.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0),
     [monthTx],
   );
 
-  const recent = useMemo(() => (recentTx || []).slice(0, 5), [recentTx]);
+  const recent = useMemo(() => recentTx.slice(0, 5), [recentTx]);
 
   const isLoading = loadingAccounts && loadingMonth && loadingRecent;
 

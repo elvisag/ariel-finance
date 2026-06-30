@@ -68,7 +68,7 @@ export default function BudgetsScreen() {
 
   const { data: budgets, isLoading: loadingBudgets, refetch: refetchBudgets } = useBudgets();
   const { data: categories, refetch: refetchCats } = useCategories();
-  const { data: monthTx, refetch: refetchTx } = useTransactions({ start_date: monthRange.start, end_date: monthRange.end });
+  const { transactions: monthTx, refetch: refetchTx } = useTransactions({ start_date: monthRange.start, end_date: monthRange.end });
   const createBudget = useCreateBudget();
   const updateBudget = useUpdateBudget();
   const deleteBudget = useDeleteBudget();
@@ -111,7 +111,7 @@ export default function BudgetsScreen() {
           </Card>
         ) : (
           budgets.map((b) => {
-            const spent = calcSpent(b, categories || [], monthTx || []);
+            const spent = calcSpent(b, categories || [], monthTx);
             const cat = categories?.find((c) => c.id === b.category_id);
             const pct = b.amount > 0 ? Math.min((spent / Number(b.amount)) * 100, 100) : 0;
             const overBudget = spent > Number(b.amount);

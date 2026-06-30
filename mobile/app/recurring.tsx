@@ -36,7 +36,7 @@ function nextOccurrence(tx: Transaction): string | null {
 export default function RecurringScreen() {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
-  const { data: transactions, isLoading, refetch } = useTransactions({ is_recurring: true });
+  const { transactions, isLoading, refetch } = useTransactions({ is_recurring: true });
   const { data: accounts } = useAccounts();
   const deleteTx = useDeleteTransaction();
 
@@ -47,7 +47,6 @@ export default function RecurringScreen() {
   }, [accounts]);
 
   const sorted = useMemo(() => {
-    if (!transactions) return [];
     return [...transactions].sort((a, b) => {
       const aFreq = a.recurrence_frequency || "";
       const bFreq = b.recurrence_frequency || "";
@@ -114,7 +113,7 @@ export default function RecurringScreen() {
           <Text className="text-text-primary text-3xl font-bold">Gastos recurrentes</Text>
         </View>
 
-        {!sorted || sorted.length === 0 ? (
+        {sorted.length === 0 ? (
           <View className="flex-1 px-6 justify-center mt-16">
             <Card className="p-8 items-center">
               <Ionicons name="repeat-outline" size={48} color="#707070" />

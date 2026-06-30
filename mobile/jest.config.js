@@ -1,8 +1,30 @@
 module.exports = {
-  preset: "jest-expo",
-  setupFilesAfterSetup: ["./jest.setup.ts"],
+  testMatch: ["**/tests/**/*.test.ts", "**/tests/**/*.test.tsx"],
+  transform: {
+    "^.+\\.(js|jsx|ts|tsx)$": "babel-jest",
+  },
   transformIgnorePatterns: [
-    "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg|@sentry/.*|expo-auth-session|expo-web-browser|expo-secure-store|@expo/.*)",
+    "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|@testing-library|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg|@sentry/.*|expo-auth-session|expo-web-browser|expo-secure-store|expo-file-system|expo-sharing|@expo/.*)",
   ],
   moduleFileExtensions: ["ts", "tsx", "js", "jsx"],
+  moduleNameMapper: {
+    "^react-native$": "<rootDir>/__mocks__/react-native.js",
+    "^react-native/(.*)$": "<rootDir>/__mocks__/react-native.js",
+    "^expo-secure-store$": "<rootDir>/__mocks__/expo-secure-store.ts",
+    "^expo-web-browser$": "<rootDir>/__mocks__/expo-web-browser.ts",
+    "^expo-auth-session$": "<rootDir>/__mocks__/expo-auth-session",
+    "^expo-file-system$": "<rootDir>/__mocks__/expo-file-system.ts",
+    "^expo-sharing$": "<rootDir>/__mocks__/expo-sharing.ts",
+    "^zustand$": "<rootDir>/__mocks__/zustand.ts",
+    "^@react-native-async-storage/async-storage$": "<rootDir>/__mocks__/@react-native-async-storage/async-storage.js",
+    "^@expo/vector-icons$": "<rootDir>/__mocks__/@expo/vector-icons.ts",
+    "^expo-constants$": "<rootDir>/__mocks__/expo-constants.ts",
+    "^expo-status-bar$": "<rootDir>/__mocks__/expo-status-bar.ts",
+    "^expo-linking$": "<rootDir>/__mocks__/expo-linking.ts",
+    "^expo-font$": "<rootDir>/__mocks__/expo-font.ts",
+    "^expo-asset$": "<rootDir>/__mocks__/expo-asset.ts",
+    "^react-native-css-interop$": "<rootDir>/__mocks__/react-native-css-interop.ts",
+    "^expo-router$": "<rootDir>/__mocks__/expo-router.ts",
+  },
+  setupFiles: ["./jest.setup.ts"],
 };

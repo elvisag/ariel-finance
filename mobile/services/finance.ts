@@ -63,6 +63,13 @@ export interface TransferPayload {
   transaction_date: string;
 }
 
+export interface PaginatedTransactions {
+  items: Transaction[];
+  total: number;
+  skip: number;
+  limit: number;
+}
+
 export interface TransferResponse {
   from_transaction: Transaction;
   to_transaction: Transaction;
@@ -144,14 +151,6 @@ export const accountsApi = {
 };
 
 export const transactionsApi = {
-  /**
-   * Listar transacciones con filtros opcionales.
-   *
-   * @param params.account_id  Filtrar por cuenta
-   * @param params.start_date  Desde (YYYY-MM-DD)
-   * @param params.end_date    Hasta (YYYY-MM-DD)
-   * @param params.type        "income", "expense" o "transfer"
-   */
   list: (params?: {
     account_id?: string;
     start_date?: string;
@@ -159,7 +158,9 @@ export const transactionsApi = {
     type?: string;
     is_recurring?: boolean;
     search?: string;
-  }) => api.get<Transaction[]>("/transactions/", { params }),
+    skip?: number;
+    limit?: number;
+  }) => api.get<PaginatedTransactions>("/transactions/", { params }),
 
   /** Crear una nueva transacción */
   create: (data: Omit<Transaction, "id" | "created_at" | "recurrence_last_date">) =>

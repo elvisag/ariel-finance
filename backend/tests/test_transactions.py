@@ -22,7 +22,10 @@ class TestListTransactions:
     async def test_empty(self, async_client: AsyncClient, auth_headers):
         response = await async_client.get("/api/v1/transactions/", headers=auth_headers)
         assert response.status_code == 200
-        assert response.json() == []
+        data = response.json()
+        assert data["items"] == []
+        assert data["total"] == 0
+        assert data["skip"] == 0
 
     async def test_list_with_filters(self, async_client: AsyncClient, auth_headers, account):
         await async_client.post("/api/v1/transactions/", headers=auth_headers, json={
@@ -34,12 +37,31 @@ class TestListTransactions:
             "description": "Sueldo", "transaction_date": "2026-06-15",
         })
 
-        all_tx = (await async_client.get("/api/v1/transactions/", headers=auth_headers)).json()
-        assert len(all_tx) == 2
+        all_resp = (await async_client.get("/api/v1/transactions/", headers=auth_headers)).json()
+        assert len(all_resp["items"]) == 2
+        assert all_resp["total"] == 2
 
         expenses = (await async_client.get("/api/v1/transactions/?type=expense", headers=auth_headers)).json()
-        assert len(expenses) == 1
-        assert float(expenses[0]["amount"]) == 100.0
+        assert len(expenses["items"]) == 1
+        assert float(expenses["items"][0]["amount"]) == 100.0
+
+    async def test_pagination(self, async_client: AsyncClient, auth_headers, account):
+        for i in range(5):
+            await async_client.post("/api/v1/transactions/", headers=auth_headers, json={
+                "account_id": account["id"], "amount": 10, "type": "expense",
+                "description": f"Tx {i}", "transaction_date": "2026-06-01",
+            })
+
+        page1 = (await async_client.get("/api/v1/transactions/?skip=0&limit=2", headers=auth_headers)).json()
+        assert len(page1["items"]) == 2
+        assert page1["total"] == 5
+        assert page1["skip"] == 0
+        assert page1["limit"] == 2
+
+        page2 = (await async_client.get("/api/v1/transactions/?skip=2&limit=2", headers=auth_headers)).json()
+        assert len(page2["items"]) == 2
+        assert page2["total"] == 5
+        assert page2["skip"] == 2
 
 
 class TestCreateTransaction:

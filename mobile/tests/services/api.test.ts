@@ -35,24 +35,24 @@ describe("api.ts — Axios client", () => {
     expect(config.headers.Authorization).toBeUndefined();
   });
 
-  it("deletes token on 401 response", () => {
+  it("deletes token on 401 response", async () => {
     const SecureStore = require("expo-secure-store");
     const error = { response: { status: 401 } };
 
-    expect(() => {
-      api.interceptors.response.handlers[0].rejected(error);
-    }).rejects.toBe(error);
+    await expect(
+      api.interceptors.response.handlers[0].rejected(error)
+    ).rejects.toBe(error);
 
     expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith("auth_token");
   });
 
-  it("does not delete token on non-401 errors", () => {
+  it("does not delete token on non-401 errors", async () => {
     const SecureStore = require("expo-secure-store");
     const error = { response: { status: 500 } };
 
-    expect(() => {
-      api.interceptors.response.handlers[0].rejected(error);
-    }).rejects.toBe(error);
+    await expect(
+      api.interceptors.response.handlers[0].rejected(error)
+    ).rejects.toBe(error);
 
     expect(SecureStore.deleteItemAsync).not.toHaveBeenCalled();
   });

@@ -3,14 +3,14 @@ from datetime import date
 from decimal import Decimal
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.account import Account
 from app.models.transaction import Transaction
 from app.models.user import User
-from app.schemas.transaction import TransactionCreate, TransactionUpdate, TransferCreate
+from app.schemas.transaction import TransactionCreate, TransactionUpdate, TransferCreate, PaginatedTransactions
 
 
 async def list_transactions(
@@ -22,23 +22,33 @@ async def list_transactions(
     type: str | None = None,
     is_recurring: bool | None = None,
     search: str | None = None,
-) -> list[Transaction]:
-    query = select(Transaction).join(Account).where(Account.user_id == user.id)
+    skip: int = 0,
+    limit: int = 50,
+) -> PaginatedTransactions:
+    base_query = select(Transaction).join(Account).where(Account.user_id == user.id)
+
     if account_id:
-        query = query.where(Transaction.account_id == account_id)
+        base_query = base_query.where(Transaction.account_id == account_id)
     if start_date:
-        query = query.where(Transaction.transaction_date >= start_date)
+        base_query = base_query.where(Transaction.transaction_date >= start_date)
     if end_date:
-        query = query.where(Transaction.transaction_date <= end_date)
+        base_query = base_query.where(Transaction.transaction_date <= end_date)
     if type:
-        query = query.where(Transaction.type == type)
+        base_query = base_query.where(Transaction.type == type)
     if is_recurring is not None:
-        query = query.where(Transaction.is_recurring == is_recurring)
+        base_query = base_query.where(Transaction.is_recurring == is_recurring)
     if search:
-        query = query.where(Transaction.description.ilike(f"%{search}%"))
-    query = query.order_by(Transaction.transaction_date.desc())
-    result = await db.execute(query)
-    return list(result.scalars().all())
+        base_query = base_query.where(Transaction.description.ilike(f"%{search}%"))
+
+    count_query = select(func.count()).select_from(base_query.subquery())
+    total_result = await db.execute(count_query)
+    total = total_result.scalar()
+
+    data_query = base_query.order_by(Transaction.transaction_date.desc()).offset(skip).limit(limit)
+    data_result = await db.execute(data_query)
+    items = list(data_result.scalars().all())
+
+    return PaginatedTransactions(items=items, total=total, skip=skip, limit=limit)
 
 
 async def create_transaction(

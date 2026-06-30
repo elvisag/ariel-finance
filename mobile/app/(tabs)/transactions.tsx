@@ -1,7 +1,10 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { View, Text, FlatList, TouchableOpacity, Alert, TextInput } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, Alert, TextInput, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import * as FileSystem from "expo-file-system";
+import * as Sharing from "expo-sharing";
+import * as SecureStore from "expo-secure-store";
 import ScreenLayout from "../../components/ScreenLayout";
 import Card from "../../components/Card";
 import TransactionRow from "../../components/TransactionRow";
@@ -51,6 +54,7 @@ export default function TransactionsScreen() {
 
   const { data: accounts } = useAccounts();
   const deleteTx = useDeleteTransaction();
+  const [exporting, setExporting] = useState(false);
 
   const params = useMemo(() => {
     const p: { type?: string; account_id?: string; search?: string } = {};
@@ -60,7 +64,42 @@ export default function TransactionsScreen() {
     return Object.keys(p).length > 0 ? p : undefined;
   }, [filterType, filterAccountId, debouncedSearch]);
 
-  const { data: transactions, isLoading, isError, error, refetch, isRefetching } = useTransactions(params);
+  const handleExportPDF = useCallback(async () => {
+    setExporting(true);
+    try {
+      const baseUrl = process.env.EXPO_PUBLIC_API_URL || "http://192.168.0.1:8000/api/v1";
+      const qs = params ? "?" + new URLSearchParams(params as any).toString() : "";
+      const url = `${baseUrl}/export/transactions/pdf${qs}`;
+      const token = await SecureStore.getItemAsync("auth_token");
+      const headers: Record<string, string> = {};
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      const result = await FileSystem.downloadAsync(
+        url,
+        FileSystem.cacheDirectory + "movimientos.pdf",
+        { headers }
+      );
+      await Sharing.shareAsync(result.uri, { mimeType: "application/pdf" });
+    } catch (err: any) {
+      const msg = err.response?.data?.detail || err.message || "No se pudo exportar el PDF";
+      Alert.alert("Error", msg);
+    } finally {
+      setExporting(false);
+    }
+  }, [params]);
+
+  const {
+    transactions,
+    total,
+    hasMore,
+    loadMore,
+    isLoading,
+    isLoadingMore,
+    isError,
+    error,
+    refetch,
+    isRefetching,
+  } = useTransactions(params);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -122,8 +161,11 @@ export default function TransactionsScreen() {
 
   return (
     <ScreenLayout>
-      <View className="px-6 pt-16 pb-4">
+      <View className="px-6 pt-16 pb-4 flex-row items-baseline gap-3">
         <Text className="text-text-primary text-3xl font-bold">Movimientos</Text>
+        {total > 0 && (
+          <Text className="text-text-secondary text-sm">{total} en total</Text>
+        )}
       </View>
 
       <View className="px-6 mb-4">
@@ -189,6 +231,21 @@ export default function TransactionsScreen() {
             </TouchableOpacity>
           )}
         </TouchableOpacity>
+
+        <TouchableOpacity
+          className="ml-auto flex-row items-center px-3 py-1.5 rounded-lg bg-bg-surface"
+          onPress={handleExportPDF}
+          disabled={exporting}
+        >
+          {exporting ? (
+            <ActivityIndicator size={14} color="#a0a0a0" />
+          ) : (
+            <Ionicons name="download-outline" size={14} color="#a0a0a0" />
+          )}
+          <Text className="ml-1.5 text-xs font-medium text-text-secondary">
+            {exporting ? "Exportando..." : "PDF"}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {isError && (
@@ -217,6 +274,8 @@ export default function TransactionsScreen() {
           keyExtractor={(item) => item.date}
           refreshing={isRefetching}
           onRefresh={refetch}
+          onEndReached={hasMore ? loadMore : undefined}
+          onEndReachedThreshold={0.5}
           renderItem={({ item: group }) => (
             <View className="mb-4">
               <Text className="text-text-secondary text-sm font-medium capitalize mb-2">{group.date}</Text>
@@ -231,7 +290,16 @@ export default function TransactionsScreen() {
               ))}
             </View>
           )}
-          ListFooterComponent={<View className="h-8" />}
+          ListFooterComponent={
+            isLoadingMore ? (
+              <View className="py-4 items-center">
+                <ActivityIndicator size="small" color="#a0a0a0" />
+                <Text className="text-text-secondary text-xs mt-2">Cargando más...</Text>
+              </View>
+            ) : (
+              <View className="h-8" />
+            )
+          }
         />
       )}
 

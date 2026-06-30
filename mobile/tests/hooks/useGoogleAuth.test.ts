@@ -25,11 +25,16 @@ jest.mock("../../services/finance", () => ({
   },
 }));
 
-jest.mock("../../store/auth", () => ({
-  useAuthStore: {
-    getState: () => ({ checkAuth: jest.fn() }),
-  },
-}));
+const mockCheckAuth = jest.fn();
+jest.mock("../../store/auth", () => {
+  const mockStore = { checkAuth: mockCheckAuth };
+  const useAuthStore = Object.assign(
+    (selector?: (s: typeof mockStore) => any) =>
+      selector ? selector(mockStore) : mockStore,
+    { getState: () => mockStore },
+  );
+  return { useAuthStore };
+});
 
 describe("useGoogleAuth hook", () => {
   const mockCheckAuth = jest.fn();
